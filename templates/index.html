@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>Outil de suivi des demandes CNAPS</title>
+<style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .header-left { display: flex; align-items: center; }
+    header img { height: 100px; margin-right: 20px; }
+    header h1 { font-size: 24px; margin: 0; }
+    .btn-link { background-color: #4CAF50; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+    table { width: 100%%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: top; }
+    input, select, button, textarea { margin: 5px 0; padding: 5px; }
+    form.inline { display: inline; }
+    .btn-green { background-color: #4CAF50; color: white; padding: 4px 8px; border: none; border-radius: 4px; }
+    .btn-orange { background-color: #FFA500; color: white; padding: 4px 8px; border: none; border-radius: 4px; }
+  </style>
+<style>
+    .statut-transmis {
+        background-color: gray; color: white; font-weight: bold;
+    }
+    .statut-enregistre {
+        background-color: orange; color: white; font-weight: bold;
+    }
+    .statut-instruction {
+        background-color: gold; color: black; font-weight: bold;
+    }
+    .statut-accepte {
+        background-color: green; color: white; font-weight: bold;
+    }
+    .statut-refuse {
+        background-color: black; color: white; font-weight: bold;
+    }
+    .statut-default {
+        background-color: lightgray; color: black; font-weight: bold;
+    }
+</style>
+<style>
+.check-auto {
+    text-align: center;
+}
+.check-auto::before {
+    content: attr(data-status);
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 5px;
+    color: white;
+}
+.check-auto[data-status="accepté"]::before {
+    background-color: green;
+}
+.check-auto[data-status="instruction en cours"]::before {
+    background-color: orange;
+}
+.check-auto[data-status="décision en cours"]::before {
+    background-color: goldenrod;
+}
+</style></head>
+<body>
+<div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px;">
+<a href="/export" style="padding: 10px 15px; background-color: green; color: white; text-decoration: none; border-radius: 5px;">Exporter CSV</a>
+<a href="/import" style="padding: 10px 15px; background-color: orange; color: white; text-decoration: none; border-radius: 5px;">Importer CSV</a>
+</div>
+<header>
+<div class="header-left">
+<img alt="Logo" src="/static/logo.png"/>
+<h1>Outil de suivi des demandes CNAPS</h1>
+</div>
+<a class="btn-link" href="https://depot-teleservices-cnaps.interieur.gouv.fr/" target="_blank">Nouvelle demande CNAPS</a>
+</header>
+<a href="/ajouter_session" style="background-color: #007BFF; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 10px; display: inline-block;">AJOUTER UNE SESSION</a>
+<form action="/add" method="POST">
+  <input name="nom" placeholder="Nom" required />
+  <input name="prenom" placeholder="Prénom" required />
+
+  <select name="formation" id="formation" onchange="updateSessions()" required>
+    <option value="">Choisir une formation</option>
+    <option value="APS">APS</option>
+    <option value="A3P">A3P</option>
+  </select>
+
+  <select name="session" id="session" required>
+    <option value="">Choisir une session</option>
+  </select>
+
+  <input name="lien" placeholder="Lien CNAPS (facultatif)" />
+
+  <button type="submit">Ajouter</button>
+</form>
+<table>
+<thead><tr>
+<th>Nom</th>
+<th>Prénom</th>
+<th>Formation</th>
+<th>Session</th>
+<th>Lien suivi CNAPS</th>
+<th>Statut dossier</th>
+<th>Statut CNAPS</th>
+<th>Commentaires</th>
+<th>Actions</th>
+<th>Check automatique</th></tr></thead>
+<tbody>
+            {% for dossier in dossiers %}
+            <tr>
+<td>{{ dossier[1] }}</td> <!-- Nom -->
+<td>{{ dossier[2] }}</td> <!-- Prénom -->
+<td>{{ dossier[3] }}</td> <!-- Formation -->
+<td></td> <!-- Session -->
+<td>
+<form action="/edit/{{ dossier[0] }}" method="post">
+<input name="lien" placeholder="Modifier lien" type="text" value="{{ dossier[5] or '' }}"/>
+<button type="submit">💾</button>
+</form>
+    {% if dossier[5] %}
+        <a href="{{ dossier[5] }}" target="_blank">🔗 Voir le lien</a>
+    {% endif %}
+</td>
+<td>
+    {% if dossier[6] == "COMPLET" %}
+        <a href="/statut/{{ dossier[0] }}/INCOMPLET">
+<span style="background-color:green;color:white;padding:5px;border-radius:5px;cursor:pointer;">COMPLET</span>
+</a>
+    {% else %}
+        <a href="/statut/{{ dossier[0] }}/COMPLET">
+<span style="background-color:orange;color:white;padding:5px;border-radius:5px;cursor:pointer;">INCOMPLET</span>
+</a>
+    {% endif %}
+</td>
+<td>
+<form action="/statut_cnaps/{{ dossier[0] }}" method="post">
+
+<button type="submit">💾</button>
+</form>
+</td>
+<td>
+<form action="/commentaire/{{ dossier[0] }}" method="post">
+<textarea cols="20" name="commentaire" rows="1">{{ dossier[7] or '' }}</textarea>
+<button type="submit">💾</button>
+</form>
+</td>
+<td>
+<a href="/attestation/{{ dossier[0] }}">📄 Attestation</a><br/>
+<a href="/delete/{{ dossier[0] }}" style="color:red;">❌ Supprimer</a>
+</td>
+<td class="check-auto" data-status="{{ dossier['check_auto'] }}">{{ 'accepté' if dossier['check_auto']=='accepté' else 'instruction en cours' if dossier['check_auto']=='instruction en cours' else 'décision en cours' if dossier['check_auto']=='décision en cours' else '' }}</td></tr>
+            {% endfor %}
+        </tbody>
+</table>
+<script>
+    function updateSessions() {
+      var formation = document.getElementById("formation").value;
+      var session = document.getElementById("session");
+      session.innerHTML = "";
+
+      if (formation === "APS") {
+        session.add(new Option("9 juillet au 12 août 2025", "9 juillet au 12 août 2025"));
+        session.add(new Option("8 septembre au 10 octobre 2025", "8 septembre au 10 octobre 2025"));
+      } else if (formation === "A3P") {
+        session.add(new Option("14 octobre au 19 décembre 2025", "14 octobre au 19 décembre 2025"));
+      }
+    }
+  </script>
+</body>
+</html>
