@@ -1,0 +1,6 @@
+flask
+python-docx
+gunicorn
+pandas
+requests
+beautifulsoup4
