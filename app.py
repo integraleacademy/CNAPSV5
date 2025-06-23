@@ -17,8 +17,7 @@ def load_data():
             return json.load(f)
     return []
 
-def save_data(data)
-
+def save_data(data):
         # Email admin
         send_email(
             subject="Nouveau dossier CNAPS",
