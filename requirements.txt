@@ -1,3 +1,0 @@
-flask
-email-validator
-reportlab
