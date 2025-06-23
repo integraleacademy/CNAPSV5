@@ -65,8 +65,9 @@ def submit():
 
 Votre dossier CNAPS a bien été reçu par notre équipe.
 
-Merci pour votre confiance.
+Nous reviendrons vers vous rapidement si des documents sont manquants.
 
+Cordialement,  
 L’équipe Intégrale Academy""",
         email
     )
@@ -85,7 +86,6 @@ def delete():
     data = load_data()
     new_data = [entry for entry in data if not (entry['nom'] == nom and entry['prenom'] == prenom)]
 
-    # Supprimer les fichiers associés
     for entry in data:
         if entry['nom'] == nom and entry['prenom'] == prenom:
             for path in entry['fichiers']:
@@ -128,4 +128,4 @@ def send_email(subject, body, to_email):
         smtp.send_message(msg)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
