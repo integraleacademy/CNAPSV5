@@ -95,7 +95,6 @@ def delete():
     save_data(new_data)
     return redirect('/admin')
 
-
 @app.route('/download', methods=['POST'])
 def download():
     nom = request.form.get('nom')
@@ -116,3 +115,8 @@ def download():
             zipf.write(file_path, os.path.basename(file_path))
 
     return send_file(zip_path, as_attachment=True)
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
