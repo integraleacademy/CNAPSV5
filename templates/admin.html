@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <title>Admin CNAPS</title>
     <style>
         body { font-family: Arial; background: #f5fff5; }
-        table { width: 100%%; border-collapse: collapse; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
         th { background: #cde8cd; }
         form { display: inline; }
@@ -15,7 +14,7 @@
     <h2>Tableau des dossiers reçus</h2>
     <table>
         <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Fichiers</th><th>Action</th></tr>
-        {% for i, row in enumerate(data) %}
+        {% for row in data %}
         <tr>
             <td>{{ row.nom }}</td>
             <td>{{ row.prenom }}</td>
@@ -27,7 +26,7 @@
             </td>
             <td>
                 <form method="POST" action="/delete">
-                    <input type="hidden" name="row_id" value="{{ i }}">
+                    <input type="hidden" name="row_id" value="{{ loop.index0 }}">
                     <button type="submit" style="color:red;">🗑️ Supprimer</button>
                 </form>
             </td>
