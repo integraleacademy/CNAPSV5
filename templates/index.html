@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Plateforme CNAPS</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body style="font-family: Arial, sans-serif;">
+    <img src="/static/logo.png" alt="Logo" style="height: 80px; margin-bottom: 20px;">
+    <h1>Plateforme de dépôt de documents CNAPS</h1>
+
+    <form action="/submit" method="post" enctype="multipart/form-data">
+        <label>Nom :</label><br>
+        <input type="text" name="nom" required><br><br>
+
+        <label>Prénom :</label><br>
+        <input type="text" name="prenom" required><br><br>
+
+        <label>Email :</label><br>
+        <input type="email" name="email" required><br><br>
+
+        <label>Hébergé ?</label><br>
+        <select name="heberge">
+            <option value="non">Non</option>
+            <option value="oui">Oui</option>
+        </select><br><br>
+
+        <label>Carte d'identité / Passeport / Titre de séjour (obligatoire) :</label><br>
+        <input type="file" name="piece_identite" multiple required><br><br>
+
+        <label>Justificatif de domicile de moins de 3 mois :</label>
+        <strong>Uniquement facture de gaz, électricité, d'eau, quittance de loyer, PAS DE FACTURE DE TÉLÉPHONE.</strong><br>
+        <input type="file" name="justificatif_domicile"><br><br>
+
+        <label>Pièce d'identité de l’hébergeant (si hébergé) :</label><br>
+        <input type="file" name="hebergement_pi"><br><br>
+
+        <label>Attestation d’hébergement (si hébergé) :</label><br>
+        <input type="file" name="attestation_hebergement"><br><br>
+
+        <button type="submit">Envoyer</button>
+    </form>
+
+    {% if admin %}
+    <hr>
+    <h2>Tableau des dossiers (admin)</h2>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>Nom</th><th>Prénom</th><th>Email</th><th>Date</th>
+            <th>Statut</th><th>Commentaire</th><th>Actions</th>
+        </tr>
+        {% for d in data %}
+        <tr>
+            <form action="/update/{{ d[0] }}" method="post">
+                <td>{{ d[1] }}</td>
+                <td>{{ d[2] }}</td>
+                <td>{{ d[3] }}</td>
+                <td>{{ d[8] }}</td>
+                <td>
+                    <select name="statut">
+                        <option value="Complet" {% if d[6] == "Complet" %}selected{% endif %}>Complet</option>
+                        <option value="Incomplet" {% if d[6] == "Incomplet" %}selected{% endif %}>Incomplet</option>
+                    </select>
+                </td>
+                <td><input type="text" name="commentaire" value="{{ d[7] }}"></td>
+                <td>
+                    <button type="submit">💾</button>
+                    <a href="/delete/{{ d[0] }}">🗑️</a>
+                </td>
+            </form>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</body>
+</html>
