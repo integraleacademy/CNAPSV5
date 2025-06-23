@@ -1,0 +1,31 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dépôt CNAPS</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f5fff5; padding: 20px; color: #003300; }
+        h1 { color: green; }
+        table { border-collapse: collapse; width: 100%; margin-top: 30px; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+        th { background-color: #c9f5c9; }
+        .admin-section { background-color: #fff; padding: 20px; border-radius: 10px; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <img src="/static/logo.png" alt="Logo Intégrale Academy" style="height: 120px; margin-bottom: 20px;">
+    <h1>Dépôt de dossier CNAPS</h1>
+    <form action="/submit" method="post" enctype="multipart/form-data">
+        Nom : <br><input type="text" name="nom" required><br><br>
+        Prénom : <br><input type="text" name="prenom" required><br><br>
+        Email : <br><input type="email" name="email" required><br><br>
+        Carte d'identité / Passeport / Titre de séjour (obligatoire) : <br>
+        <input type="file" name="piece_identite" multiple required><br><br>
+        Justificatif de domicile (-3 mois) : <strong>Uniquement facture de gaz, électricité, d'eau, quittance de loyer, PAS DE FACTURE DE TÉLÉPHONE</strong><br>
+        <input type="file" name="justificatif_domicile"><br><br>
+        <label><input type="checkbox" name="heberge"> Je suis hébergé(e)</label><br><br>
+        <button type="submit">Envoyer</button>
+    </form>
+</body>
+</html>
