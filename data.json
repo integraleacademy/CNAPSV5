@@ -1,0 +1,10 @@
+[
+  {
+    "nom": "Dupont",
+    "prenom": "Jean",
+    "email": "jean@exemple.com",
+    "fichiers": [
+      "uploads/testfile.pdf"
+    ]
+  }
+]
