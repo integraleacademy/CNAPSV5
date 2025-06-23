@@ -1,6 +1,5 @@
-
-from flask import Flask, render_template, request, redirect, url_for
-import os, json, smtplib
+from flask import Flask, render_template, request, redirect, url_for, send_file
+import os, json, smtplib, io, zipfile
 from email.message import EmailMessage
 from werkzeug.utils import secure_filename
 
@@ -68,36 +67,8 @@ def delete():
         save_data(data)
     return redirect("/admin")
 
-def send_email(subject, body, to):
-    msg = EmailMessage()
-    msg.set_content(
-        f"Bonjour,
-
-Nous confirmons la réception de votre dossier CNAPS.
-"
-        f"Nom : {body.split()[4]}
-"
-        f"Prénom : {body.split()[5]}
-"
-        f"Votre dossier est en cours de traitement. Vous serez recontacté sous peu.
-
-"
-        f"Cordialement,
-L'équipe Intégrale Academy"
-    )
-    msg["Subject"] = subject
-    msg["From"] = os.environ["SMTP_USER"]
-    msg["To"] = to
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASS"])
-        smtp.send_message(msg)
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
 @app.route("/download", methods=["POST"])
 def download():
-    import zipfile, io
     row_id = int(request.form["row_id"])
     data = load_data()
     if 0 <= row_id < len(data):
@@ -109,7 +80,32 @@ def download():
                 if os.path.exists(path):
                     zipf.write(path, arcname=os.path.basename(path))
         mem_zip.seek(0)
-        from flask import send_file
         filename = f"{row['prenom']}_{row['nom']}_documents.zip"
         return send_file(mem_zip, as_attachment=True, download_name=filename)
     return redirect("/admin")
+
+def send_email(subject, body, to):
+    msg = EmailMessage()
+    prenom, nom = body.split()[4], body.split()[5]
+    msg.set_content(f"""Bonjour,
+
+Nous confirmons la réception de votre dossier CNAPS.
+
+Nom : {nom}
+Prénom : {prenom}
+
+Votre dossier est en cours de traitement. Vous serez recontacté sous peu.
+
+Cordialement,
+L'équipe Intégrale Academy
+""")
+    msg["Subject"] = subject
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = to
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASS"])
+        smtp.send_message(msg)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
