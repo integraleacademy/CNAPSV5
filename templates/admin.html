@@ -56,24 +56,24 @@
                 <td>{{ row.email }}</td>
                 <td>
                     <ul>
-                        {% for fichier in row.fichiers %}<li><a href='{{ fichier }}' download>{{ fichier.split('/')[-1] }}</a></li>
-                        <li><a href="{{ url_for('static', filename=fichier) }}" target="_blank">{{ fichier.split('/')[-1] }}</a></li>
+                        {% for fichier in row.fichiers %}
+                        <li><a href="{{ url_for('uploaded_file', filename=fichier) }}" target="_blank">{{ fichier }}</a></li>
                         {% endfor %}
                     </ul>
                 </td>
                 <td>
                     <form method="POST" action="/download">
-<input type="hidden" name="nom" value="{{ row.nom }}">
-<input type="hidden" name="prenom" value="{{ row.prenom }}">
-<button type="submit">📦 Télécharger</button>
-</form>
+                        <input type="hidden" name="nom" value="{{ row.nom }}">
+                        <input type="hidden" name="prenom" value="{{ row.prenom }}">
+                        <button type="submit">📦 Télécharger</button>
+                    </form>
                 </td>
                 <td>
                     <form method="POST" action="/delete">
-<input type="hidden" name="nom" value="{{ row.nom }}">
-<input type="hidden" name="prenom" value="{{ row.prenom }}">
-<button type="submit">🗑️ Supprimer</button>
-</form>
+                        <input type="hidden" name="nom" value="{{ row.nom }}">
+                        <input type="hidden" name="prenom" value="{{ row.prenom }}">
+                        <button type="submit">🗑️ Supprimer</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
