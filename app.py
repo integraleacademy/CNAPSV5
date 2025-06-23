@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, redirect, url_for
 import os, json, smtplib
 from email.message import EmailMessage
@@ -72,10 +71,11 @@ def send_email(subject, body, to):
     msg = EmailMessage()
     msg.set_content(body)
     msg["Subject"] = subject
-    msg["From"] = "ecole@integraleacademy.com"
+    msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = to
+
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login("ecole@integraleacademy.com", os.environ["EMAIL_APP_PASSWORD"])
+        smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASS"])
         smtp.send_message(msg)
 
 if __name__ == "__main__":
