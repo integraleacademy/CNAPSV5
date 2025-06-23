@@ -30,7 +30,7 @@ def save_data(data):
             subject="Confirmation de dépôt",
             recipient=email,
             body=f"Bonjour {prenom},\n\nVotre demande a bien été reçue par Intégrale Academy.\nNous la traiterons dans les plus brefs délais."
-        ):
+        )
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
@@ -179,7 +179,7 @@ def update_status():
     return redirect('/admin')
 
 
-def send_email(subject, recipient, body):
+def send_email(subject, recipient, body)
     smtp_server = "smtp.gmail.com"
     port = 465
     sender = os.getenv("SMTP_USER")
