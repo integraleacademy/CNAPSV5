@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin CNAPS</title>
+    <style>
+        body { font-family: Arial; background: #f5fff5; }
+        table { width: 100%%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background: #cde8cd; }
+        form { display: inline; }
+    </style>
+</head>
+<body>
+    <h2>Tableau des dossiers reçus</h2>
+    <table>
+        <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Fichiers</th><th>Action</th></tr>
+        {% for i, row in enumerate(data) %}
+        <tr>
+            <td>{{ row.nom }}</td>
+            <td>{{ row.prenom }}</td>
+            <td>{{ row.email }}</td>
+            <td>
+                {% for f in row.fichiers %}
+                    <a href="{{ url_for('static', filename=f) }}" target="_blank">{{ f.split('/')[-1] }}</a><br>
+                {% endfor %}
+            </td>
+            <td>
+                <form method="POST" action="/delete">
+                    <input type="hidden" name="row_id" value="{{ i }}">
+                    <button type="submit" style="color:red;">🗑️ Supprimer</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
