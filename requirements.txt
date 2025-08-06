@@ -1,3 +1,5 @@
 flask
 email-validator
 gunicorn
+pillow
+pypandoc
