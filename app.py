@@ -13,11 +13,9 @@ DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def convert_to_pdf(filepath):
-    filename, ext = os.path.splitext(filepath)
-    ext = ext.lower()
-
-    pdf_path = f"{filename}_converted.pdf"
+def convert_to_pdf(filepath, output_filename):
+    ext = os.path.splitext(filepath)[1].lower()
+    pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
         if ext in ['.jpg', '.jpeg', '.png']:
@@ -54,9 +52,6 @@ def send_email_notification(user_email, user_name):
         <html>
           <body style='font-family: Arial, sans-serif; color: #333;'>
             <div style='max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px;'>
-              <div style='text-align: center;'>
-                <img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACAAAAAgACAYAAACyp9MwAAAAAXNSR0IArs4c6QAAIABJREFUeF7s3emTXNd5J+jfvVn7BqCwkgBIECQIiptEihQlWYvb1mJJVrvtno7ono8d/edNx0RMx9gT0Z6xLJlaKFDiBpIAsZEg9gKqUKi9MvNO3FsARaklkSCxVGU9x3Ejq7Iy7z3nOYeirPc97ykWfv7fqmgECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIDAhhYoJABs6PnTeQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAg0AhIALAQCBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIBADwhIAOiBSTQEAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIECAgAcAaIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECPSAgAaAHJtEQCBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQICABABrgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQI9ICABIAemERDIECAAAECBAgQIECAAAECB
-              </div>
               <p>Bonjour <strong>{user_name}</strong>,</p>
               <p>Nous avons bien reçu votre dossier CNAPS. Il est en cours de traitement.</p>
               <p>Merci pour votre confiance,</p>
@@ -104,14 +99,14 @@ def submit():
 
     def save_files(files, prefix, nom, prenom):
         paths = []
-        for file in files:
+        for i, file in enumerate(files):
             if file and file.filename:
-                filename = f"{nom}_{prenom}_{prefix}_{file.filename}"
-                path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(path)
-                converted = convert_to_pdf(path)
+                base_filename = f"{nom}_{prenom}_{prefix}_{i}"
+                temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{os.path.splitext(file.filename)[1]}")
+                file.save(temp_path)
+                converted = convert_to_pdf(temp_path, base_filename)
                 if converted:
-                    os.remove(path)
+                    os.remove(temp_path)
                     paths.append(converted)
         return paths
 
@@ -130,8 +125,7 @@ def submit():
     })
     save_data(data)
 
-    print(f"Email non envoyé à {email} – fonction désactivée")
-
+    print(f"Dossier reçu pour {prenom} {nom} – {len(fichiers)} fichier(s) PDF enregistrés.")
     return redirect(url_for('index'))
 
 @app.route('/admin')
