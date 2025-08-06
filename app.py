@@ -4,12 +4,35 @@ import json
 import smtplib
 import zipfile
 from email.message import EmailMessage
+from PIL import Image
+import pypandoc
 
 app = Flask(__name__)
 UPLOAD_FOLDER = '/mnt/data/uploads'
 DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def convert_to_pdf(filepath):
+    filename, ext = os.path.splitext(filepath)
+    ext = ext.lower()
+
+    pdf_path = f"{filename}_converted.pdf"
+
+    try:
+        if ext in ['.jpg', '.jpeg', '.png']:
+            image = Image.open(filepath)
+            rgb_im = image.convert('RGB')
+            rgb_im.save(pdf_path)
+        elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
+            pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
+        else:
+            print(f"Format non pris en charge pour la conversion : {ext}")
+            return None
+        return os.path.basename(pdf_path)
+    except Exception as e:
+        print(f"Erreur lors de la conversion de {filepath} : {e}")
+        return None
 
 def send_email_notification(user_email, user_name):
     smtp_server = "smtp.gmail.com"
@@ -32,48 +55,33 @@ def send_email_notification(user_email, user_name):
           <body style='font-family: Arial, sans-serif; color: #333;'>
             <div style='max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px;'>
               <div style='text-align: center;'>
-                <img src='https://cnapsv5-1.onrender.com/static/logo_integrale_academy_mail.png' alt='Logo Intégrale Academy' style='max-width: 180px; margin-bottom: 20px;' />
+                <img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACAAAAAgACAYAAACyp9MwAAAAAXNSR0IArs4c6QAAIABJREFUeF7s3emTXNd5J+jfvVn7BqCwkgBIECQIiptEihQlWYvb1mJJVrvtno7ono8d/edNx0RMx9gT0Z6xLJlaKFDiBpIAsZEg9gKqUKi9MvNO3FsARaklkSCxVGU9x3Ejq7Iy7z3nOYeirPc97ykWfv7fqmgECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIDAhhYoJABs6PnTeQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAg0AhIALAQCBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIBADwhIAOiBSTQEAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIECAgAcAaIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECPSAgAaAHJtEQCBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQICABABrgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQI9ICABIAemERDIECAAAECBAgQIECAAAECB
               </div>
-              <h2 style='color: #2e7d32;'>✅ Dossier CNAPS bien reçu</h2>
               <p>Bonjour <strong>{user_name}</strong>,</p>
-              <p>Nous vous confirmons la bonne réception de votre dossier pour la demande d’autorisation CNAPS.</p>
-              <p>Notre équipe va désormais procéder à l’étude de votre dossier et le transmettre au CNAPS pour instruction si tout est conforme.
-              Si des documents sont manquants ou non conformes, nous reviendrons vers vous pour compléter votre dossier.</p>
-              <p>Pour toute question, n’hésitez pas à nous contacter par mail sur l'adresse <a href='mailto:ecole@integraleacademy.com'>ecole@integraleacademy.com</a> ou par téléphone au 04 22 47 07 68.</p>
-              <p style='margin-top: 30px;'>Merci pour votre confiance,</p>
+              <p>Nous avons bien reçu votre dossier CNAPS. Il est en cours de traitement.</p>
+              <p>Merci pour votre confiance,</p>
               <p>L’équipe <strong>Intégrale Academy</strong></p>
-              <hr>
-              <p style='font-size: 12px; color: #888;'>Ce message est généré automatiquement. Merci de ne pas y répondre.</p>
             </div>
           </body>
         </html>
         """, subtype='html')
 
-        msg_to_admin = EmailMessage()
-        msg_to_admin["Subject"] = f"Nouveau dossier CNAPS reçu - {user_name}"
-        msg_to_admin["From"] = smtp_user
-        msg_to_admin["To"] = "isf.demande@gmail.com"
-        msg_to_admin.set_content(f"""Un nouveau dossier a été déposé par {user_name} ({user_email}).\nConsultez l’espace admin pour plus d’infos.""")
-
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg_to_user)
-            server.send_message(msg_to_admin)
-            print("Emails sent successfully.")
 
     except Exception as e:
-        print(f"Erreur lors de l'envoi des emails : {e}")
-
+        print(f"Erreur lors de l'envoi de l'email : {e}")
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r') as f:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
 def save_data(data):
-    with open(DATA_FILE, 'w') as f:
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
 @app.route('/')
@@ -101,7 +109,10 @@ def submit():
                 filename = f"{nom}_{prenom}_{prefix}_{file.filename}"
                 path = os.path.join(UPLOAD_FOLDER, filename)
                 file.save(path)
-                paths.append(filename)
+                converted = convert_to_pdf(path)
+                if converted:
+                    os.remove(path)
+                    paths.append(converted)
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
@@ -121,7 +132,7 @@ def submit():
 
     print(f"Email non envoyé à {email} – fonction désactivée")
 
-    return redirect('/?submitted=true')
+    return redirect(url_for('index'))
 
 @app.route('/admin')
 def admin():
@@ -130,51 +141,31 @@ def admin():
 
 @app.route('/delete', methods=['POST'])
 def delete():
-    nom = request.form.get('nom')
-    prenom = request.form.get('prenom')
-
+    index = int(request.form['index'])
     data = load_data()
-    new_data = []
-
-    for entry in data:
-        if entry['nom'] == nom and entry['prenom'] == prenom:
-            # Supprimer les fichiers associés
-            fichiers = entry.get('fichiers', [])
-            for file in fichiers:
-                path = os.path.join(UPLOAD_FOLDER, file)
-                if os.path.exists(path):
-                    os.remove(path)
-        else:
-            new_data.append(entry)
-
-    save_data(new_data)
-    return redirect('/admin')
-
+    if 0 <= index < len(data):
+        for fichier in data[index]["fichiers"]:
+            try:
+                os.remove(os.path.join(UPLOAD_FOLDER, fichier))
+            except:
+                pass
+        data.pop(index)
+        save_data(data)
+    return redirect(url_for('admin'))
 
 @app.route('/download', methods=['POST'])
 def download():
-    nom = request.form.get('nom')
-    prenom = request.form.get('prenom')
-
-    entry = next((e for e in load_data() if e["nom"] == nom and e["prenom"] == prenom), None)
-    if not entry or not entry["fichiers"]:
-        return "Aucun fichier trouvé.", 404
-
-    zip_path = os.path.join(UPLOAD_FOLDER, f"{nom}_{prenom}.zip")
+    index = int(request.form['index'])
+    data = load_data()
+    dossier = data[index]
+    zip_path = os.path.join(UPLOAD_FOLDER, f"{dossier['nom']}_{dossier['prenom']}.zip")
     with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for file in entry["fichiers"]:
-            full_path = os.path.join(UPLOAD_FOLDER, file)
-            if os.path.exists(full_path):
-                zipf.write(full_path, file)
-
+        for fichier in dossier["fichiers"]:
+            file_path = os.path.join(UPLOAD_FOLDER, fichier)
+            if os.path.exists(file_path):
+                zipf.write(file_path, fichier)
     return send_file(zip_path, as_attachment=True)
-
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_file(os.path.join(UPLOAD_FOLDER, filename))
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
