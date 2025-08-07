@@ -13,6 +13,9 @@ DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+def clean_filename(text):
+    return text.strip().replace(" ", "_")
+
 def convert_to_pdf(filepath, output_filename):
     ext = os.path.splitext(filepath)[1].lower()
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
@@ -25,11 +28,11 @@ def convert_to_pdf(filepath, output_filename):
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
         else:
-            print(f"Format non pris en charge pour la conversion : {ext}")
+            print(f"[WARNING] Format non pris en charge : {ext}")
             return None
         return os.path.basename(pdf_path)
     except Exception as e:
-        print(f"Erreur lors de la conversion de {filepath} : {e}")
+        print(f"[ERROR] Conversion échouée pour {filepath} : {e}")
         return None
 
 def send_email_notification(user_email, user_name):
@@ -85,8 +88,8 @@ def index():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    nom = request.form['nom']
-    prenom = request.form['prenom']
+    nom = clean_filename(request.form['nom'])
+    prenom = clean_filename(request.form['prenom'])
     email = request.form['email']
     send_email_notification(email, f"{prenom} {nom}")
 
@@ -108,6 +111,8 @@ def submit():
                 if converted:
                     os.remove(temp_path)
                     paths.append(converted)
+                else:
+                    print(f"[WARNING] Aucun PDF généré pour {temp_path}")
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
@@ -125,7 +130,7 @@ def submit():
     })
     save_data(data)
 
-    print(f"Dossier reçu pour {prenom} {nom} – {len(fichiers)} fichier(s) PDF enregistrés.")
+    print(f"[INFO] Dossier reçu pour {prenom} {nom} – {len(fichiers)} fichier(s) PDF enregistrés.")
     return redirect(url_for('index'))
 
 @app.route('/admin')
@@ -158,8 +163,13 @@ def download():
             file_path = os.path.join(UPLOAD_FOLDER, fichier)
             if os.path.exists(file_path):
                 zipf.write(file_path, fichier)
+            else:
+                print(f"[ERROR] Fichier manquant : {file_path}")
     return send_file(zip_path, as_attachment=True)
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    return send_file(os.path.join(UPLOAD_FOLDER, filename))
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        print(f"[ERROR] Tentative d’accès à un fichier inexistant : {path}")
+    return send_file(path)
