@@ -14,11 +14,13 @@ DATA_FILE = '/mnt/data/data.json'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def clean_filename(text):
-    return text.strip().replace(" ", "_")
+    return text.strip().replace(" ", "_").replace("'", "").replace('"', '')
 
 def convert_to_pdf(filepath, output_filename):
     ext = os.path.splitext(filepath)[1].lower()
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
+
+    print(f"[INFO] Tentative de conversion : {filepath} → {pdf_path}")
 
     try:
         if ext in ['.jpg', '.jpeg', '.png']:
@@ -30,6 +32,7 @@ def convert_to_pdf(filepath, output_filename):
         else:
             print(f"[WARNING] Format non pris en charge : {ext}")
             return None
+        print(f"[SUCCESS] PDF créé : {pdf_path}")
         return os.path.basename(pdf_path)
     except Exception as e:
         print(f"[ERROR] Conversion échouée pour {filepath} : {e}")
@@ -172,4 +175,5 @@ def uploaded_file(filename):
     path = os.path.join(UPLOAD_FOLDER, filename)
     if not os.path.exists(path):
         print(f"[ERROR] Tentative d’accès à un fichier inexistant : {path}")
+        return "Fichier introuvable", 404
     return send_file(path)
