@@ -33,8 +33,11 @@ def convert_to_pdf(filepath, output_filename):
     print(f"[INFO] Tentative de conversion : {filepath} → {pdf_path}")
 
     try:
-        # PDF déjà prêt : on copie tel quel
+        # PDF déjà prêt : on copie tel quel (sauf si même chemin)
         if ext == '.pdf':
+            if os.path.abspath(filepath) == os.path.abspath(pdf_path):
+                print(f"[INFO] PDF déjà au bon format (même chemin), pas de copie : {pdf_path}")
+                return os.path.basename(pdf_path)
             shutil.copy(filepath, pdf_path)
             print(f"[SUCCESS] PDF déjà au bon format, copié : {pdf_path}")
             return os.path.basename(pdf_path)
@@ -45,7 +48,7 @@ def convert_to_pdf(filepath, output_filename):
                 print("[WARNING] Format HEIC reçu mais pillow-heif indisponible.")
                 return None
             image = Image.open(filepath)
-            # Certaines HEIC/WEBP peuvent être multi-frames; on prend la première
+            # Certaines images peuvent être multi-frames; on prend la première
             if getattr(image, "is_animated", False):
                 image.seek(0)
             rgb_im = image.convert('RGB')
@@ -141,7 +144,10 @@ def submit():
                 file.save(temp_path)
                 converted = convert_to_pdf(temp_path, base_filename)
                 if converted:
-                    os.remove(temp_path)
+                    final_path = os.path.join(UPLOAD_FOLDER, converted)
+                    # Ne supprime pas si le PDF final est le même fichier que la source
+                    if os.path.abspath(final_path) != os.path.abspath(temp_path):
+                        os.remove(temp_path)
                     paths.append(converted)
                 else:
                     print(f"[WARNING] Aucun PDF généré pour {temp_path}")
