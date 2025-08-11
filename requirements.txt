@@ -3,3 +3,4 @@ email-validator
 gunicorn
 pillow
 pypandoc
+pillow-heif==0.16.0
