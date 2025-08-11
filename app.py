@@ -6,6 +6,16 @@ import zipfile
 from email.message import EmailMessage
 from PIL import Image
 import pypandoc
+import shutil
+
+# HEIC support (optionnel si pillow-heif installé)
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    HEIC_OK = True
+except Exception as e:
+    print(f"[WARNING] HEIC non activé: {e}")
+    HEIC_OK = False
 
 app = Flask(__name__)
 UPLOAD_FOLDER = '/mnt/data/uploads'
@@ -23,17 +33,36 @@ def convert_to_pdf(filepath, output_filename):
     print(f"[INFO] Tentative de conversion : {filepath} → {pdf_path}")
 
     try:
-        if ext in ['.jpg', '.jpeg', '.png']:
+        # PDF déjà prêt : on copie tel quel
+        if ext == '.pdf':
+            shutil.copy(filepath, pdf_path)
+            print(f"[SUCCESS] PDF déjà au bon format, copié : {pdf_path}")
+            return os.path.basename(pdf_path)
+
+        # Images (y compris HEIC si pillow-heif est chargé)
+        if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
+            if ext == '.heic' and not HEIC_OK:
+                print("[WARNING] Format HEIC reçu mais pillow-heif indisponible.")
+                return None
             image = Image.open(filepath)
+            # Certaines HEIC/WEBP peuvent être multi-frames; on prend la première
+            if getattr(image, "is_animated", False):
+                image.seek(0)
             rgb_im = image.convert('RGB')
             rgb_im.save(pdf_path)
+            print(f"[SUCCESS] PDF créé : {pdf_path}")
+            return os.path.basename(pdf_path)
+
+        # Documents (nécessite pandoc + moteur PDF côté Render)
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
+            print(f"[SUCCESS] PDF créé : {pdf_path}")
+            return os.path.basename(pdf_path)
+
         else:
             print(f"[WARNING] Format non pris en charge : {ext}")
             return None
-        print(f"[SUCCESS] PDF créé : {pdf_path}")
-        return os.path.basename(pdf_path)
+
     except Exception as e:
         print(f"[ERROR] Conversion échouée pour {filepath} : {e}")
         return None
