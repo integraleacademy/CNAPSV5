@@ -132,7 +132,7 @@ Après vérification, vos documents transmis ne sont pas conformes.
 Merci de refaire la procédure en suivant le lien ci-dessous :
 {url_for('index', _external=True)}
 
-⚠️ Il est très important de fournir uniquement les documents demandés (voir la liste précisée sur le formulaire).
+⚠️ Il est très important de fournir uniquement les documents demandés.
 
 Commentaire : {comment}
 
