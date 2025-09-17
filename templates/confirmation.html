@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmation - CNAPS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5fff5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 600px;
+    }
+    h1 {
+      color: #27ae60;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 1.2em;
+    }
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 20px;
+      background: #27ae60;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    a:hover {
+      background: #219150;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>✅ Votre dossier a bien été transmis</h1>
+    <p>Merci d’avoir soumis vos documents.<br>
+       Vous allez recevoir un email de confirmation sous peu.</p>
+    <a href="{{ url_for('index') }}">⬅️ Retour au formulaire</a>
+  </div>
+</body>
+</html>
