@@ -256,3 +256,82 @@ def uploaded_file(filename):
         print(f"[ERROR] Tentative d’accès à un fichier inexistant : {path}")
         return "Fichier introuvable", 404
     return send_file(path)
+
+def send_non_conforme_email(user_email, user_name, comment):
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_user = os.environ.get("EMAIL_USER")
+    smtp_password = os.environ.get("EMAIL_PASSWORD")
+
+    if not smtp_user or not smtp_password:
+        print("Email environment variables not set.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Documents non conformes - Intégrale Academy"
+        msg["From"] = smtp_user
+        msg["To"] = user_email
+
+        contenu_txt = f"""Bonjour {user_name},
+
+Après vérification, vos documents transmis ne sont pas conformes.
+Merci de refaire la procédure.
+
+Commentaire : {comment}
+
+Cordialement,
+L’équipe Intégrale Academy
+"""
+        contenu_html = f"""
+        <html>
+          <body style='font-family: Arial, sans-serif; color: #333;'>
+            <p>Bonjour <strong>{user_name}</strong>,</p>
+            <p>Après vérification, vos documents transmis <span style="color:red;"><b>ne sont pas conformes</b></span>.</p>
+            <p><b>Commentaire :</b> {comment}</p>
+            <p>Merci de refaire la procédure.</p>
+            <p>L’équipe <strong>Intégrale Academy</strong></p>
+          </body>
+        </html>
+        """
+        msg.set_content(contenu_txt)
+        msg.add_alternative(contenu_html, subtype="html")
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            print(f"[MAIL] Non conforme envoyé à {user_email}")
+
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
+
+
+@app.route('/save_comment', methods=['POST'])
+def save_comment():
+    index = int(request.form['index'])
+    comment = request.form['commentaire']
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]["commentaire"] = comment
+        save_data(data)
+    return redirect(url_for('admin'))
+
+
+@app.route('/set_status', methods=['POST'])
+def set_status():
+    index = int(request.form['index'])
+    status = request.form['status']
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]["statut"] = status
+        save_data(data)
+
+        # si NON CONFORME => envoyer mail
+        if status == "non conforme":
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            commentaire = data[index].get("commentaire", "Aucun commentaire")
+            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire)
+
+    return redirect(url_for('admin'))
+
