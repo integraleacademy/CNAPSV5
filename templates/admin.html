@@ -78,6 +78,10 @@
                     {% if row.mail_conforme_date %}
                         <div style="margin-top:5px; font-size:12px; color:green;">
                             ✅ Dossier conforme le {{ row.mail_conforme_date }}
+                            {% if row.dernier_mail_conforme %}
+                                <br>
+                                <button type="button" class="view-mail" data-mail="{{ row.dernier_mail_conforme|tojson|safe }}">👁 Voir le mail</button>
+                            {% endif %}
                         </div>
                     {% endif %}
                     {% if row.mail_non_conforme_date %}
@@ -85,7 +89,7 @@
                             📧 Mail non conforme envoyé le {{ row.mail_non_conforme_date }}
                             {% if row.dernier_mail_non_conforme %}
                                 <br>
-                                <button type="button" onclick="showMail(`{{ row.dernier_mail_non_conforme|safe }}`)">👁 Voir le mail</button>
+                                <button type="button" class="view-mail" data-mail="{{ row.dernier_mail_non_conforme|tojson|safe }}">👁 Voir le mail</button>
                             {% endif %}
                         </div>
                     {% endif %}
@@ -108,10 +112,10 @@
       </div>
     </div>
 
-    <!-- Fenêtre modale pour afficher le mail -->
+    <!-- Fenêtre modale pour afficher les mails -->
     <div id="mailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
       <div style="background:#fff; width:600px; margin:50px auto; padding:20px; border-radius:8px; max-height:80%; overflow:auto;">
-        <h3>📧 Mail Non Conforme</h3>
+        <h3>📧 Mail envoyé</h3>
         <div id="mailContent" style="text-align:left;"></div>
         <br>
         <button onclick="closeMailModal()">❌ Fermer</button>
@@ -120,6 +124,7 @@
 
     <script>
     document.addEventListener("DOMContentLoaded", () => {
+        // Commentaires
         document.querySelectorAll(".edit-comment").forEach(btn => {
             btn.addEventListener("click", () => {
                 const index = btn.getAttribute("data-index");
@@ -129,15 +134,19 @@
                 document.getElementById("commentModal").style.display = "block";
             });
         });
+
+        // Voir les mails
+        document.querySelectorAll(".view-mail").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const content = btn.getAttribute("data-mail") || "";
+                document.getElementById("mailContent").innerHTML = content;
+                document.getElementById("mailModal").style.display = "block";
+            });
+        });
     });
 
     function closeModal() {
         document.getElementById("commentModal").style.display = "none";
-    }
-
-    function showMail(content) {
-        document.getElementById("mailContent").innerHTML = content;
-        document.getElementById("mailModal").style.display = "block";
     }
     function closeMailModal() {
         document.getElementById("mailModal").style.display = "none";
