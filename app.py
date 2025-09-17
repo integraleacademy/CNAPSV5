@@ -94,7 +94,7 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
     if not smtp_user or not smtp_password:
-        print("⚠️ Email environment variables not set.")
+        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis dans Render")
         return False
 
     try:
@@ -109,18 +109,21 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
+
+        print(f"📧 Mail '{subject}' envoyé à {user_email}")  # ✅ confirmation explicite dans logs Render
         return True
+
     except Exception as e:
-        print(f"Erreur lors de l'envoi de l'email ({subject}): {e}")
+        print(f"⚠️ Erreur lors de l'envoi du mail ({subject}) à {user_email} : {e}")
         return False
 
 def send_accuse_reception(user_email, user_name):
     contenu_txt = f"""Bonjour {user_name},
 
 Votre dossier a bien été transmis ✅
-Nous reviendrons vers vous dans les meilleurs délais après vérification de vos documents.
+Vous recevrez un retour de l’équipe Intégrale Academy après vérification.
 
-Merci par avance,
+Merci pour votre confiance,
 L’équipe Intégrale Academy
 """
 
@@ -128,11 +131,11 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Confirmation de dépôt documents CNAPS</h2>
+          <h2 style="color:#27ae60;">✅ Confirmation de dépôt</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous avons bien reçu vos documents afin que nous puissions transmettre une demande d'autorisation auprès du <span style="color:green; font-weight:bold;">CNAPS - Ministère de l'intérieur</span>.</p>
-          <p>Nous reviendrons vers vous dans les meilleurs délais après vérification de vos documents.</p>
-          <p>Merci par avance.</p>
+          <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
+          <p>Vous recevrez un retour de l’équipe Intégrale Academy après vérification de vos documents.</p>
+          <p>Merci pour votre confiance.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -144,14 +147,13 @@ L’équipe Intégrale Academy
 def send_non_conforme_email(user_email, user_name, comment, dossier, data):
     contenu_txt = f"""Bonjour {user_name},
 
-Nous revenons vers vous suite aux documents transmis pour la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Après vérification par nos services, les documents transmis ne sont pas conformes.
-
-Commentaire : {comment}
-
-Nous vous remercions de bien vouloir procéder à une nouvelle demande dans les meilleurs délais en cliquant ici :
+Après vérification, vos documents transmis ne sont pas conformes.
+Merci de refaire la procédure en suivant le lien ci-dessous :
 {url_for('index', _external=True)}
 
-⚠️ Nous vous remercions de bien vouloir transmettre des documents conformes à la réglementation en vigueur.
+⚠️ Il est très important de fournir uniquement les documents demandés.
+
+Commentaire : {comment}
 
 Cordialement,
 L’équipe Intégrale Academy
@@ -163,18 +165,18 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous suite aux documents transmis pour la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Après vérification par nos services, les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p>Après vérification, vos documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
           <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Nous vous remercions de bien vouloir nous transmettre des documents conformes à la réglementation en vigueur</strong>.
+            ⚠️ <strong>Merci de fournir uniquement les documents demandés</strong>.
           </p>
-          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
+          <p><b>Détail :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
             <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
                🔄 Déposer une nouvelle demande
             </a>
           </div>
-          <p>Nous vous remercions de bien vouloir procéder à une nouvelle demande dans les meilleurs délais.</p>
+          <p>Merci de refaire la procédure dès que possible.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -200,11 +202,11 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
+          <h2 style="color:#27ae60;">✅ Documents conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons <strong>procédé à la demande d'autorisation préalable auprès du CNAPS</strong>.</p>
-          <p>Le CNAPS va désormais procéder à une enquête administrative (vérification des antécédents judiciaires). Dès que l'enquête sera terminée, vous recevrez l'autorisation par courrier postal à votre domicile.</p>
+          <p>Vos documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous allons maintenant <strong>procéder à la demande d'autorisation auprès du CNAPS</strong>.</p>
+          <p>Merci pour votre confiance.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -280,7 +282,6 @@ def submit():
     nom_prenom = f"{prenom} {nom}"
     send_accuse_reception(email, nom_prenom)
 
-    # Redirection vers la page de confirmation
     return redirect(url_for('confirmation'))
 
 @app.route('/confirmation')
