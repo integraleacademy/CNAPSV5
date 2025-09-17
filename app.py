@@ -24,7 +24,101 @@ DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ... (toutes tes fonctions existantes convert_to_pdf, send_email_notification, etc.)
+
+# -----------------------
+# Fonctions utilitaires
+# -----------------------
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return []
+    return []
+
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+def clean_filename(text):
+    return text.strip().replace(" ", "_").replace("'", "").replace('"', '')
+
+def convert_to_pdf(filepath, output_filename):
+    ext = os.path.splitext(filepath)[1].lower()
+    pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
+
+    try:
+        if ext == '.pdf':
+            shutil.copy(filepath, pdf_path)
+            return os.path.basename(pdf_path)
+
+        try:
+            img = Image.open(filepath)
+            if getattr(img, "is_animated", False):
+                img.seek(0)
+            rgb_im = img.convert('RGB')
+            rgb_im.save(pdf_path)
+            return os.path.basename(pdf_path)
+        except Exception:
+            pass
+
+        if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
+            if ext == '.heic' and not HEIC_OK:
+                return None
+            image = Image.open(filepath)
+            if getattr(image, "is_animated", False):
+                image.seek(0)
+            rgb_im = image.convert('RGB')
+            rgb_im.save(pdf_path)
+            return os.path.basename(pdf_path)
+
+        elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
+            pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
+            return os.path.basename(pdf_path)
+
+        return None
+
+    except Exception as e:
+        print(f"[ERROR] Conversion échouée : {e}")
+        return None
+
+
+# -----------------------
+# Gestion des emails
+# -----------------------
+
+def send_email_notification(user_email, user_name):
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_user = os.environ.get("EMAIL_USER")
+    smtp_password = os.environ.get("EMAIL_PASSWORD")
+
+    if not smtp_user or not smtp_password:
+        print("Email environment variables not set.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Confirmation de dépôt de dossier CNAPS - Intégrale Academy"
+        msg["From"] = smtp_user
+        msg["To"] = user_email
+        msg.set_content(f"""Bonjour {user_name},
+
+Nous avons bien reçu votre dossier CNAPS. Il est en cours de traitement.
+
+Merci pour votre confiance,
+L’équipe Intégrale Academy.""")
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email : {e}")
+
 
 def send_non_conforme_email(user_email, user_name, comment):
     smtp_server = "smtp.gmail.com"
@@ -98,6 +192,70 @@ L’équipe Intégrale Academy
         print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
 
 
+# -----------------------
+# Routes Flask
+# -----------------------
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    nom = clean_filename(request.form['nom'])
+    prenom = clean_filename(request.form['prenom'])
+    email = request.form['email']
+    send_email_notification(email, f"{prenom} {nom}")
+
+    fichiers = []
+    id_files = request.files.getlist('id_files')
+    domicile_file = request.files.get('domicile_file')
+    identite_hebergeant = request.files.get('identite_hebergeant')
+    attestation_hebergement = request.files.get('attestation_hebergement')
+
+    def save_files(files, prefix, nom, prenom):
+        paths = []
+        for i, file in enumerate(files):
+            if file and file.filename:
+                base_filename = f"{nom}_{prenom}_{prefix}_{i}"
+                orig_ext = os.path.splitext(file.filename)[1].lower()
+                temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
+                file.save(temp_path)
+                converted = convert_to_pdf(temp_path, base_filename)
+                if converted:
+                    final_path = os.path.join(UPLOAD_FOLDER, converted)
+                    if os.path.abspath(final_path) != os.path.abspath(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
+                    paths.append(converted)
+        return paths
+
+    fichiers += save_files(id_files, "id", nom, prenom)
+    fichiers += save_files([domicile_file], "domicile", nom, prenom)
+    fichiers += save_files([identite_hebergeant], "id_hebergeant", nom, prenom)
+    fichiers += save_files([attestation_hebergement], "attestation", nom, prenom)
+
+    data = load_data()
+    data.append({
+        "nom": nom,
+        "prenom": prenom,
+        "email": email,
+        "fichiers": fichiers,
+        "commentaire": "",
+        "statut": "",
+        "mail_non_conforme_date": ""
+    })
+    save_data(data)
+
+    return redirect(url_for('index', submitted="true"))
+
+@app.route('/admin')
+def admin():
+    data = load_data()
+    return render_template('admin.html', data=data)
+
 @app.route('/save_comment', methods=['POST'])
 def save_comment():
     index = int(request.form['index'])
@@ -108,7 +266,6 @@ def save_comment():
         save_data(data)
     return redirect(url_for('admin'))
 
-
 @app.route('/set_status', methods=['POST'])
 def set_status():
     index = int(request.form['index'])
@@ -116,12 +273,44 @@ def set_status():
     data = load_data()
     if 0 <= index < len(data):
         data[index]["statut"] = status
-
         if status == "non conforme":
             nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
             commentaire = data[index].get("commentaire", "Aucun commentaire")
             send_non_conforme_email(data[index]["email"], nom_prenom, commentaire)
             data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
         save_data(data)
     return redirect(url_for('admin'))
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    index = int(request.form['index'])
+    data = load_data()
+    if 0 <= index < len(data):
+        for fichier in data[index]["fichiers"]:
+            try:
+                os.remove(os.path.join(UPLOAD_FOLDER, fichier))
+            except:
+                pass
+        data.pop(index)
+        save_data(data)
+    return redirect(url_for('admin'))
+
+@app.route('/download', methods=['POST'])
+def download():
+    index = int(request.form['index'])
+    data = load_data()
+    dossier = data[index]
+    zip_path = os.path.join(UPLOAD_FOLDER, f"{dossier['nom']}_{dossier['prenom']}.zip")
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for fichier in dossier["fichiers"]:
+            file_path = os.path.join(UPLOAD_FOLDER, fichier)
+            if os.path.exists(file_path):
+                zipf.write(file_path, fichier)
+    return send_file(zip_path, as_attachment=True)
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        return "Fichier introuvable", 404
+    return send_file(path)
