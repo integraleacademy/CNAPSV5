@@ -87,37 +87,7 @@ def convert_to_pdf(filepath, output_filename):
 # Gestion des emails
 # -----------------------
 
-def send_email_notification(user_email, user_name):
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    smtp_user = os.environ.get("EMAIL_USER")
-    smtp_password = os.environ.get("EMAIL_PASSWORD")
-
-    if not smtp_user or not smtp_password:
-        print("Email environment variables not set.")
-        return
-
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Confirmation de dépôt de dossier CNAPS - Intégrale Academy"
-        msg["From"] = smtp_user
-        msg["To"] = user_email
-        msg.set_content(f"""Bonjour {user_name},
-
-Nous avons bien reçu votre dossier CNAPS. Il est en cours de traitement.
-
-Merci pour votre confiance,
-L’équipe Intégrale Academy.""")
-
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
-    except Exception as e:
-        print(f"Erreur lors de l'envoi de l'email : {e}")
-
-def send_non_conforme_email(user_email, user_name, comment, dossier):
+def send_non_conforme_email(user_email, user_name, comment, dossier, data):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_user = os.environ.get("EMAIL_USER")
@@ -149,7 +119,7 @@ L’équipe Intégrale Academy
           </p>
           <p><b>Détail :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
-            <a href="{url_for('index', _external=True)}" 
+            <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
                🔄 Déposer une nouvelle demande
             </a>
@@ -162,6 +132,7 @@ L’équipe Intégrale Academy
     """
 
     dossier["dernier_mail_non_conforme"] = contenu_html
+    save_data(data)
 
     if not smtp_user or not smtp_password:
         print("Email environment variables not set.")
@@ -179,12 +150,11 @@ L’équipe Intégrale Academy
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-            print(f"[MAIL] Non conforme envoyé à {user_email}")
 
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
 
-def send_conforme_email(user_email, user_name, dossier):
+def send_conforme_email(user_email, user_name, dossier, data):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_user = os.environ.get("EMAIL_USER")
@@ -215,6 +185,7 @@ L’équipe Intégrale Academy
     """
 
     dossier["dernier_mail_conforme"] = contenu_html
+    save_data(data)
 
     if not smtp_user or not smtp_password:
         print("Email environment variables not set.")
@@ -232,7 +203,6 @@ L’équipe Intégrale Academy
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-            print(f"[MAIL] Conforme envoyé à {user_email}")
 
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email CONFORME : {e}")
@@ -250,7 +220,6 @@ def submit():
     nom = clean_filename(request.form['nom'])
     prenom = clean_filename(request.form['prenom'])
     email = request.form['email']
-    send_email_notification(email, f"{prenom} {nom}")
 
     fichiers = []
     id_files = request.files.getlist('id_files')
@@ -297,7 +266,12 @@ def submit():
     })
     save_data(data)
 
-    return redirect(url_for('index', submitted="true"))
+    # Redirection vers la page de confirmation
+    return redirect(url_for('confirmation'))
+
+@app.route('/confirmation')
+def confirmation():
+    return render_template('confirmation.html')
 
 @app.route('/admin')
 def admin():
@@ -325,17 +299,27 @@ def set_status():
         if status == "non conforme":
             nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
             commentaire = data[index].get("commentaire", "Aucun commentaire")
-            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index])
+            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index], data)
             data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
 
         elif status == "conforme":
             nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
-            send_conforme_email(data[index]["email"], nom_prenom, data[index])
+            send_conforme_email(data[index]["email"], nom_prenom, data[index], data)
             data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
 
         save_data(data)
 
     return redirect(url_for('admin'))
+
+@app.route('/mail_preview/<int:index>/<status>')
+def mail_preview(index, status):
+    data = load_data()
+    if 0 <= index < len(data):
+        if status == "conforme":
+            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
+        elif status == "non_conforme":
+            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
+    return "Mail introuvable"
 
 @app.route('/delete', methods=['POST'])
 def delete():
@@ -345,7 +329,7 @@ def delete():
         for fichier in data[index]["fichiers"]:
             try:
                 os.remove(os.path.join(UPLOAD_FOLDER, fichier))
-            except:
+            except Exception:
                 pass
         data.pop(index)
         save_data(data)
@@ -370,16 +354,3 @@ def uploaded_file(filename):
     if not os.path.exists(path):
         return "Fichier introuvable", 404
     return send_file(path)
-
-# -----------------------
-# Nouvelle route pour voir les mails
-# -----------------------
-@app.route('/mail_preview/<int:index>/<status>')
-def mail_preview(index, status):
-    data = load_data()
-    if 0 <= index < len(data):
-        if status == "conforme":
-            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
-        elif status == "non_conforme":
-            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
-    return "Mail introuvable"
