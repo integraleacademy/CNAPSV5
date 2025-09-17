@@ -87,12 +87,61 @@ def convert_to_pdf(filepath, output_filename):
 # Gestion des emails
 # -----------------------
 
-def send_non_conforme_email(user_email, user_name, comment, dossier, data):
+def send_email(user_email, subject, contenu_txt, contenu_html):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_user = os.environ.get("EMAIL_USER")
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
+    if not smtp_user or not smtp_password:
+        print("⚠️ Email environment variables not set.")
+        return False
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = smtp_user
+        msg["To"] = user_email
+        msg.set_content(contenu_txt)
+        msg.add_alternative(contenu_html, subtype="html")
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email ({subject}): {e}")
+        return False
+
+def send_accuse_reception(user_email, user_name):
+    contenu_txt = f"""Bonjour {user_name},
+
+Votre dossier a bien été transmis ✅
+Vous recevrez un retour de l’équipe Intégrale Academy après vérification.
+
+Merci pour votre confiance,
+L’équipe Intégrale Academy
+"""
+
+    contenu_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
+          <h2 style="color:#27ae60;">✅ Confirmation de dépôt</h2>
+          <p>Bonjour <strong>{user_name}</strong>,</p>
+          <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
+          <p>Vous recevrez un retour de l’équipe Intégrale Academy après vérification de vos documents.</p>
+          <p>Merci pour votre confiance.</p>
+          <p>L’équipe <strong>Intégrale Academy</strong></p>
+        </div>
+      </body>
+    </html>
+    """
+
+    return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
+
+def send_non_conforme_email(user_email, user_name, comment, dossier, data):
     contenu_txt = f"""Bonjour {user_name},
 
 Après vérification, vos documents transmis ne sont pas conformes.
@@ -134,32 +183,9 @@ L’équipe Intégrale Academy
     dossier["dernier_mail_non_conforme"] = contenu_html
     save_data(data)
 
-    if not smtp_user or not smtp_password:
-        print("Email environment variables not set.")
-        return
-
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Documents non conformes - Intégrale Academy"
-        msg["From"] = smtp_user
-        msg["To"] = user_email
-        msg.set_content(contenu_txt)
-        msg.add_alternative(contenu_html, subtype="html")
-
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
-    except Exception as e:
-        print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
+    send_email(user_email, "Documents non conformes - Intégrale Academy", contenu_txt, contenu_html)
 
 def send_conforme_email(user_email, user_name, dossier, data):
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
-    smtp_user = os.environ.get("EMAIL_USER")
-    smtp_password = os.environ.get("EMAIL_PASSWORD")
-
     contenu_txt = f"""Bonjour {user_name},
 
 Vos documents transmis sont conformes ✅
@@ -187,25 +213,7 @@ L’équipe Intégrale Academy
     dossier["dernier_mail_conforme"] = contenu_html
     save_data(data)
 
-    if not smtp_user or not smtp_password:
-        print("Email environment variables not set.")
-        return
-
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Documents conformes - Intégrale Academy"
-        msg["From"] = smtp_user
-        msg["To"] = user_email
-        msg.set_content(contenu_txt)
-        msg.add_alternative(contenu_html, subtype="html")
-
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
-
-    except Exception as e:
-        print(f"Erreur lors de l'envoi de l'email CONFORME : {e}")
+    send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
 
 # -----------------------
 # Routes Flask
@@ -252,7 +260,7 @@ def submit():
     fichiers += save_files([attestation_hebergement], "attestation", nom, prenom)
 
     data = load_data()
-    data.append({
+    dossier = {
         "nom": nom,
         "prenom": prenom,
         "email": email,
@@ -263,8 +271,13 @@ def submit():
         "mail_conforme_date": "",
         "dernier_mail_non_conforme": "",
         "dernier_mail_conforme": ""
-    })
+    }
+    data.append(dossier)
     save_data(data)
+
+    # Envoi du mail d’accusé de réception
+    nom_prenom = f"{prenom} {nom}"
+    send_accuse_reception(email, nom_prenom)
 
     # Redirection vers la page de confirmation
     return redirect(url_for('confirmation'))
