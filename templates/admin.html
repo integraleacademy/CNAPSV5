@@ -78,20 +78,16 @@
                     {% if row.mail_conforme_date %}
                         <div style="margin-top:5px; font-size:12px; color:green;">
                             ✅ Dossier conforme le {{ row.mail_conforme_date }}
-                            {% if row.dernier_mail_conforme %}
-                                <br>
-                                <button type="button" class="view-mail" data-mail="{{ row.dernier_mail_conforme|tojson|safe }}">👁 Voir le mail</button>
-                            {% endif %}
+                            <br>
+                            <button type="button" class="view-mail" data-index="{{ loop.index0 }}" data-status="conforme">👁 Voir le mail</button>
                         </div>
                     {% endif %}
 
                     {% if row.mail_non_conforme_date %}
                         <div style="margin-top:5px; font-size:12px; color:#555;">
                             📧 Mail non conforme envoyé le {{ row.mail_non_conforme_date }}
-                            {% if row.dernier_mail_non_conforme %}
-                                <br>
-                                <button type="button" class="view-mail" data-mail="{{ row.dernier_mail_non_conforme|tojson|safe }}">👁 Voir le mail</button>
-                            {% endif %}
+                            <br>
+                            <button type="button" class="view-mail" data-index="{{ loop.index0 }}" data-status="non_conforme">👁 Voir le mail</button>
                         </div>
                     {% endif %}
                 </td>
@@ -106,52 +102,4 @@
         <h3>✏️ Commentaire</h3>
         <form id="commentForm" action="/save_comment" method="POST">
           <input type="hidden" name="index" id="modalIndex"/>
-          <textarea name="commentaire" id="modalComment" style="width:100%; height:150px;"></textarea><br><br>
-          <button type="submit">💾 Enregistrer</button>
-          <button type="button" onclick="closeModal()">❌ Annuler</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Fenêtre modale pour afficher les mails -->
-    <div id="mailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
-      <div style="background:#fff; width:600px; margin:50px auto; padding:20px; border-radius:8px; max-height:80%; overflow:auto;">
-        <h3>📧 Mail envoyé</h3>
-        <div id="mailContent" style="text-align:left;"></div>
-        <br>
-        <button onclick="closeMailModal()">❌ Fermer</button>
-      </div>
-    </div>
-
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        // Commentaires
-        document.querySelectorAll(".edit-comment").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const index = btn.getAttribute("data-index");
-                const comment = btn.getAttribute("data-comment") || "";
-                document.getElementById("modalIndex").value = index;
-                document.getElementById("modalComment").value = comment;
-                document.getElementById("commentModal").style.display = "block";
-            });
-        });
-
-        // Voir les mails
-        document.querySelectorAll(".view-mail").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const content = btn.getAttribute("data-mail") || "";
-                document.getElementById("mailContent").innerHTML = content;
-                document.getElementById("mailModal").style.display = "block";
-            });
-        });
-    });
-
-    function closeModal() {
-        document.getElementById("commentModal").style.display = "none";
-    }
-    function closeMailModal() {
-        document.getElementById("mailModal").style.display = "none";
-    }
-    </script>
-</body>
-</html>
+          <textarea name="commentaire" id="modalComment" style
