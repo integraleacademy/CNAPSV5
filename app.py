@@ -130,7 +130,7 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#27ae60;">✅ Confirmation de dépôt documents CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous avons bien reçu vos documents afin que nous puissions transmettre une demande d'autorisation auprès du<span style="color:green; font-weight:bold;">CNAPS - Ministère de l'intérieur</span>.</p>
+          <p>Nous avons bien reçu vos documents afin que nous puissions transmettre une demande d'autorisation auprès du <span style="color:green; font-weight:bold;">CNAPS - Ministère de l'intérieur</span>.</p>
           <p>Nous reviendrons vers vous dans les meilleurs délais après vérification de vos documents.</p>
           <p>Merci par avance.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
