@@ -1,6 +1,4 @@
-
 <!DOCTYPE html>
-
 <html>
 <head>
 <title>Dépôt CNAPS</title>
@@ -12,7 +10,18 @@
             color: green;
             margin-top: 20px;
         }
-    </style>
+        .conformite-box {
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #f9fff9;
+        }
+        .conformite-box h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+</style>
 <script>
         function toggleHeberge() {
             var section = document.getElementById("heberge_section");
@@ -29,67 +38,69 @@
             if (params.get("submitted") === "true") {
                 document.getElementById("message").innerText = "Votre dossier a bien été transmis.";
             }
+
+            // Validation cases conformité
+            const form = document.querySelector("form");
+            form.addEventListener("submit", function (e) {
+                const checks = document.querySelectorAll(".check-conformite");
+                let allChecked = true;
+                checks.forEach(chk => {
+                    if (!chk.checked) allChecked = false;
+                });
+                if (!allChecked) {
+                    e.preventDefault();
+                    alert("⚠️ Vous devez cocher toutes les cases de conformité avant de valider le formulaire.");
+                }
+            });
         });
-    </script>
+</script>
 </head>
-<body><div style="max-width: 700px; margin: 40px auto; text-align: center; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.05);"><img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height: 150px; display: block; margin: 0 auto 20px auto;"/><h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em;">Formulaire de dépôt CNAPS</h2><form action="/submit" enctype="multipart/form-data" method="POST" onsubmit="showMessage()" style="text-align: left; margin-top: 20px;">
-<label>Nom :</label><input name="nom" required="" type="text"/>
-<label>Prénom :</label><input name="prenom" required="" type="text"/>
-<label>Email :</label><input name="email" required="" type="email"/>
-<label>1 - Carte d'identité RECTO ET VERSO / Passeport / Titre de séjour :</label>
-<div id="id-files-container"><input multiple="" name="id_files" required="" type="file"/><button id="add-id-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button></div>
-<label>2 - Justificatif de domicile DE MOINS DE 3 MOIS :</label>
-<strong>ATTENTION : Bien vérifier que le justicatif de domicile à moins de 3 mois. Uniquement facture de gaz, d'électricité, d'eau ou quittance de loyer (PAS de facture de téléphone)</strong>
-<input name="domicile_file" required="" type="file"/>
-<label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">3 - Si vous êtes hébergé(e), cochez la case <input id="heberge" onchange="toggleHeberge()" type="checkbox"/></label>
-<div id="heberge_section" style="display: none;">
-<label>Pièce d'identité de l'hébergeant - ATTENTION : RECTO ET VERSO :</label>
-<div id="hebergeant-files-container"><input name="identite_hebergeant" type="file"/><button id="add-hebergeant-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button></div>
-<label>Attestation d'hébergement :</label>
-<input name="attestation_hebergement" type="file"/>
+<body>
+<div style="max-width: 700px; margin: 40px auto; text-align: center; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.05);">
+    <img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height: 150px; display: block; margin: 0 auto 20px auto;"/>
+    <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em;">Formulaire de dépôt CNAPS</h2>
+
+    <form action="/submit" enctype="multipart/form-data" method="POST" onsubmit="showMessage()" style="text-align: left; margin-top: 20px;">
+        <label>Nom :</label><input name="nom" required type="text"/>
+        <label>Prénom :</label><input name="prenom" required type="text"/>
+        <label>Email :</label><input name="email" required type="email"/>
+        
+        <label>1 - Carte d'identité RECTO ET VERSO / Passeport / Titre de séjour :</label>
+        <div id="id-files-container">
+            <input multiple name="id_files" required type="file"/>
+            <button id="add-id-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
+        </div>
+
+        <label>2 - Justificatif de domicile DE MOINS DE 3 MOIS :</label>
+        <strong>ATTENTION : Bien vérifier que le justificatif de domicile a moins de 3 mois. Uniquement facture de gaz, d'électricité, d'eau ou quittance de loyer (PAS de facture de téléphone)</strong>
+        <input name="domicile_file" required type="file"/>
+
+        <label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">
+            3 - Si vous êtes hébergé(e), cochez la case 
+            <input id="heberge" onchange="toggleHeberge()" type="checkbox"/>
+        </label>
+        <div id="heberge_section" style="display: none;">
+            <label>Pièce d'identité de l'hébergeant - ATTENTION : RECTO ET VERSO :</label>
+            <div id="hebergeant-files-container">
+                <input name="identite_hebergeant" type="file"/>
+                <button id="add-hebergeant-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
+            </div>
+            <label>Attestation d'hébergement :</label>
+            <input name="attestation_hebergement" type="file"/>
+        </div>
+
+        <!-- Nouvelle section Contrôle de conformité -->
+        <div class="conformite-box">
+            <h3>🔍 Contrôle de conformité</h3>
+            <label><input type="checkbox" class="check-conformite"/> J'ai bien fourni ma carte d'identité RECTO et VERSO (face avant, face arrière) ou mon passeport.</label>
+            <label><input type="checkbox" class="check-conformite"/> Les documents que j'ai fourni sont bien LISIBLES et ne sont pas flous.</label>
+            <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile a bien MOINS DE 3 MOIS.</label>
+            <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile N'EST PAS UNE FACTURE DE TÉLÉPHONE.</label>
+        </div>
+
+        <button type="submit">Envoyer</button>
+        <div id="message-area" style="font-size: 1.3em; margin-top: 15px; font-weight: bold; text-align: center;"></div>
+    </form>
 </div>
-<button type="submit">Envoyer</button><div id="message-area" style="font-size: 1.3em; margin-top: 15px; font-weight: bold; text-align: center;"></div><div id="message-area" style="font-size: 1.4em; margin-top: 10px; font-weight: bold; text-align: center;"></div>
-</form></div><script>
-document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const messageArea = document.getElementById("message-area");
-    if (!messageArea) return;
-
-    if (urlParams.get("submitted") === "true") {
-        messageArea.innerText = "✅ Votre dossier a bien été transmis.";
-        messageArea.style.color = "green";
-    }
-
-    const form = document.querySelector("form");
-    if (form) {
-        form.addEventListener("submit", function () {
-            messageArea.innerText = "⏳ Votre dossier est en cours d’envoi…";
-            messageArea.style.color = "orange";
-        });
-    }
-});
-</script><script>
-document.addEventListener("DOMContentLoaded", function () {
-  const addButton = document.getElementById("add-id-file");
-  const container = document.getElementById("id-files-container");
-  addButton.addEventListener("click", function () {
-    const newInput = document.createElement("input");
-    newInput.type = "file";
-    newInput.name = "id_files";
-    newInput.required = true;
-    container.insertBefore(newInput, addButton);
-  });
-});
-</script><script>
-document.addEventListener("DOMContentLoaded", function () {
-  const addHebergeant = document.getElementById("add-hebergeant-file");
-  const containerHebergeant = document.getElementById("hebergeant-files-container");
-  addHebergeant.addEventListener("click", function () {
-    const newInput = document.createElement("input");
-    newInput.type = "file";
-    newInput.name = "identite_hebergeant";
-    containerHebergeant.insertBefore(newInput, addHebergeant);
-  });
-});
-</script></body>
+</body>
 </html>
