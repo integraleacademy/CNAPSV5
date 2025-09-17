@@ -12,7 +12,6 @@
         button { padding: 6px 12px; cursor: pointer; border: none; border-radius: 5px; }
         .btn-green { background-color: #4CAF50; color: white; }
         .btn-red { background-color: #f44336; color: white; }
-        textarea { width: 180px; height: 60px; }
     </style>
 </head>
 <body>
@@ -57,7 +56,12 @@
                     </form>
                 </td>
                 <td>
-                    <button type="button" onclick="openModal({{ loop.index0 }}, '{{ row.commentaire|default('', true)|escape }}')">✏️ Ajouter / Modifier</button>
+                    <button type="button"
+                            class="edit-comment"
+                            data-index="{{ loop.index0 }}"
+                            data-comment="{{ row.commentaire|default('', true) | e }}">
+                        ✏️ Ajouter / Modifier
+                    </button>
                 </td>
                 <td>
                     <form action="/set_status" method="POST" style="display:inline;">
@@ -95,11 +99,18 @@
     </div>
 
     <script>
-    function openModal(index, comment) {
-        document.getElementById("modalIndex").value = index;
-        document.getElementById("modalComment").value = comment.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
-        document.getElementById("commentModal").style.display = "block";
-    }
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".edit-comment").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const index = btn.getAttribute("data-index");
+                const comment = btn.getAttribute("data-comment") || "";
+                document.getElementById("modalIndex").value = index;
+                document.getElementById("modalComment").value = comment;
+                document.getElementById("commentModal").style.display = "block";
+            });
+        });
+    });
+
     function closeModal() {
         document.getElementById("commentModal").style.display = "none";
     }
