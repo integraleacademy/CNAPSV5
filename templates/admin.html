@@ -1,134 +1,133 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="utf-8"/>
-    <title>Administration CNAPS</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f5f5f5; text-align: center; }
-        img { height: 100px; margin-bottom: 30px; }
-        table { margin: auto; border-collapse: collapse; background-color: #fff; }
-        th, td { border: 1px solid #ccc; padding: 12px 16px; vertical-align: top; }
-        th { background-color: #e0f0e0; }
-        button, a { padding: 6px 12px; cursor: pointer; border: none; border-radius: 5px; text-decoration: none; }
-        .btn-green { background-color: #4CAF50; color: white; }
-        .btn-red { background-color: #f44336; color: white; }
-    </style>
-</head>
-<body>
-    <img alt="Logo Intégrale Academy" src="{{ url_for('static', filename='logo_integrale_academy.png') }}" style="max-height: 80px;"/>
-    <h1>Tableau des dossiers CNAPS</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Prénom</th>
-                <th>Email</th>
-                <th>Fichiers</th>
-                <th>Télécharger</th>
-                <th>Supprimer</th>
-                <th>Commentaire</th>
-                <th>Statut</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-            <tr>
-                <td>{{ row.nom }}</td>
-                <td>{{ row.prenom }}</td>
-                <td>{{ row.email }}</td>
-                <td>
-                    <ul>
-                        {% for fichier in row.fichiers %}
-                            <li><a href="{{ url_for('uploaded_file', filename=fichier) }}" target="_blank">{{ fichier }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </td>
-                <td>
-                    <form action="/download" method="POST">
-                        <input type="hidden" name="index" value="{{ loop.index0 }}"/>
-                        <button type="submit">📦 Télécharger</button>
-                    </form>
-                </td>
-                <td>
-                    <form action="/delete" method="POST">
-                        <input type="hidden" name="index" value="{{ loop.index0 }}"/>
-                        <button type="submit">🗑️ Supprimer</button>
-                    </form>
-                </td>
-                <td>
-                    <button type="button"
-                            class="edit-comment"
-                            data-index="{{ loop.index0 }}"
-                            data-comment="{{ row.commentaire|default('', true) | e }}">
-                        ✏️ Ajouter / Modifier
-                    </button>
-                </td>
-                <td>
-                    <form action="/set_status" method="POST" style="display:inline;">
-                        <input type="hidden" name="index" value="{{ loop.index0 }}"/>
-                        <input type="hidden" name="status" value="conforme"/>
-                        <button type="submit" class="btn-green">✅ Conforme</button>
-                    </form>
-                    <form action="/set_status" method="POST" style="display:inline;">
-                        <input type="hidden" name="index" value="{{ loop.index0 }}"/>
-                        <input type="hidden" name="status" value="non conforme"/>
-                        <button type="submit" class="btn-red">❌ Non conforme</button>
-                    </form>
+<title>Dépôt CNAPS</title>
+<style>
+        body { font-family: Arial; background: #f5fff5; }
+        label, input, textarea, select { display: block; margin: 10px 0; }
+        #message {
+            font-weight: bold;
+            color: green;
+            margin-top: 20px;
+        }
+        .conformite-box {
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #f9fff9;
+        }
+        .conformite-box h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        .conformite-box label {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 8px 0;
+            line-height: 1.4;
+            font-size: 1em; /* ✅ taille uniforme */
+        }
+        .conformite-box input[type="checkbox"] {
+            margin-top: 2px;
+            transform: scale(1.2);
+        }
+</style>
+<script>
+        function toggleHeberge() {
+            var section = document.getElementById("heberge_section");
+            section.style.display = document.getElementById("heberge").checked ? "block" : "none";
+        }
 
-                    {% if row.mail_conforme_date %}
-                        <div style="margin-top:5px; font-size:12px; color:green;">
-                            ✅ Dossier conforme le {{ row.mail_conforme_date }}
-                            {% if row.dernier_mail_conforme %}
-                                <br>
-                                <a href="{{ url_for('mail_preview', index=loop.index0, status='conforme') }}" target="_blank">👁 Voir le mail</a>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    {% if row.mail_non_conforme_date %}
-                        <div style="margin-top:5px; font-size:12px; color:#555;">
-                            📧 Mail non conforme envoyé le {{ row.mail_non_conforme_date }}
-                            {% if row.dernier_mail_non_conforme %}
-                                <br>
-                                <a href="{{ url_for('mail_preview', index=loop.index0, status='non_conforme') }}" target="_blank">👁 Voir le mail</a>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Fenêtre modale pour commentaires -->
-    <div id="commentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
-      <div style="background:#fff; width:400px; margin:100px auto; padding:20px; border-radius:8px; position:relative;">
-        <h3>✏️ Commentaire</h3>
-        <form id="commentForm" action="/save_comment" method="POST">
-          <input type="hidden" name="index" id="modalIndex"/>
-          <textarea name="commentaire" id="modalComment" style="width:100%; height:150px;"></textarea><br><br>
-          <button type="submit">💾 Enregistrer</button>
-          <button type="button" onclick="closeModal()">❌ Annuler</button>
-        </form>
-      </div>
-    </div>
-
-    <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll(".edit-comment").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const index = btn.getAttribute("data-index");
-                const comment = btn.getAttribute("data-comment") || "";
-                document.getElementById("modalIndex").value = index;
-                document.getElementById("modalComment").value = comment;
-                document.getElementById("commentModal").style.display = "block";
+        window.addEventListener("DOMContentLoaded", () => {
+            const form = document.querySelector("form");
+            form.addEventListener("submit", function (e) {
+                const checks = document.querySelectorAll(".check-conformite");
+                let allChecked = true;
+                checks.forEach(chk => {
+                    if (!chk.checked) allChecked = false;
+                });
+                if (!allChecked) {
+                    e.preventDefault();
+                    alert("⚠️ Vous devez cocher toutes les cases de conformité avant de valider le formulaire.");
+                }
             });
         });
-    });
+</script>
+</head>
+<body>
+<div style="max-width: 700px; margin: 40px auto; text-align: center; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.05);">
+    <img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height: 150px; display: block; margin: 0 auto 20px auto;"/>
+    <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em;">Formulaire de dépôt CNAPS</h2>
 
-    function closeModal() {
-        document.getElementById("commentModal").style.display = "none";
-    }
-    </script>
+    <form action="/submit" enctype="multipart/form-data" method="POST" style="text-align: left; margin-top: 20px;">
+        <label>Nom :</label><input name="nom" required type="text"/>
+        <label>Prénom :</label><input name="prenom" required type="text"/>
+        <label>Email :</label><input name="email" required type="email"/>
+        
+        <label>1 - Carte d'identité RECTO ET VERSO / Passeport / Titre de séjour :</label>
+        <div id="id-files-container">
+            <input multiple name="id_files" required type="file"/>
+            <button id="add-id-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
+        </div>
+
+        <label>2 - Justificatif de domicile DE MOINS DE 3 MOIS :</label>
+        <strong>ATTENTION : Bien vérifier que le justificatif de domicile a moins de 3 mois. Uniquement facture de gaz, d'électricité, d'eau ou quittance de loyer (PAS de facture de téléphone)</strong>
+        <input name="domicile_file" required type="file"/>
+
+        <label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">
+            3 - Si vous êtes hébergé(e), cochez la case 
+            <input id="heberge" onchange="toggleHeberge()" type="checkbox"/>
+        </label>
+        <div id="heberge_section" style="display: none;">
+            <label>Pièce d'identité de l'hébergeant - ATTENTION : RECTO ET VERSO :</label>
+            <div id="hebergeant-files-container">
+                <input name="identite_hebergeant" type="file"/>
+                <button id="add-hebergeant-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
+            </div>
+            <label>Attestation d'hébergement :</label>
+            <input name="attestation_hebergement" type="file"/>
+        </div>
+
+        <!-- Nouvelle section Contrôle de conformité -->
+        <div class="conformite-box">
+            <h3>🔍 Contrôle de conformité</h3>
+            <label><input type="checkbox" class="check-conformite"/> J'ai bien fourni ma carte d'identité RECTO et VERSO (face avant, face arrière) ou mon passeport.</label>
+            <label><input type="checkbox" class="check-conformite"/> Les documents que j'ai fourni sont bien LISIBLES et ne sont pas flous.</label>
+            <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile a bien MOINS DE 3 MOIS.</label>
+            <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile N'EST PAS UNE FACTURE DE TÉLÉPHONE.</label>
+        </div>
+
+        <button type="submit">Envoyer</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addButton = document.getElementById("add-id-file");
+  const container = document.getElementById("id-files-container");
+  addButton.addEventListener("click", function () {
+    const newInput = document.createElement("input");
+    newInput.type = "file";
+    newInput.name = "id_files";
+    newInput.required = true;
+    container.insertBefore(newInput, addButton);
+  });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addHebergeant = document.getElementById("add-hebergeant-file");
+  const containerHebergeant = document.getElementById("hebergeant-files-container");
+  addHebergeant.addEventListener("click", function () {
+    const newInput = document.createElement("input");
+    newInput.type = "file";
+    newInput.name = "identite_hebergeant";
+    containerHebergeant.insertBefore(newInput, addHebergeant);
+  });
+});
+</script>
 </body>
 </html>
