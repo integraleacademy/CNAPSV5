@@ -21,6 +21,16 @@
             margin-top: 0;
             color: #2e7d32;
         }
+        .conformite-box label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .conformite-box input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
 </style>
 <script>
         function toggleHeberge() {
@@ -102,5 +112,32 @@
         <div id="message-area" style="font-size: 1.3em; margin-top: 15px; font-weight: bold; text-align: center;"></div>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addButton = document.getElementById("add-id-file");
+  const container = document.getElementById("id-files-container");
+  addButton.addEventListener("click", function () {
+    const newInput = document.createElement("input");
+    newInput.type = "file";
+    newInput.name = "id_files";
+    newInput.required = true;
+    container.insertBefore(newInput, addButton);
+  });
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addHebergeant = document.getElementById("add-hebergeant-file");
+  const containerHebergeant = document.getElementById("hebergeant-files-container");
+  addHebergeant.addEventListener("click", function () {
+    const newInput = document.createElement("input");
+    newInput.type = "file";
+    newInput.name = "identite_hebergeant";
+    containerHebergeant.insertBefore(newInput, addHebergeant);
+  });
+});
+</script>
 </body>
 </html>
