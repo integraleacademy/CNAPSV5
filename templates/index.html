@@ -23,13 +23,17 @@
         }
         .conformite-box label {
             display: flex;
-            align-items: flex-start; /* case alignée en haut */
-            gap: 8px;
-            margin: 8px 0;
-            line-height: 1.4;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 1.1em !important;   /* ✅ force taille uniforme */
+            font-weight: normal !important; /* ✅ évite l’influence du <strong> précédent */
+            line-height: 1.5;
+            color: #000;
         }
         .conformite-box input[type="checkbox"] {
-            margin-top: 2px;
+            margin-top: 4px;
+            flex-shrink: 0;
             transform: scale(1.2);
         }
 </style>
@@ -39,18 +43,7 @@
             section.style.display = document.getElementById("heberge").checked ? "block" : "none";
         }
 
-        function showMessage() {
-            const message = document.getElementById("message");
-            message.innerText = "Votre dossier est en cours d'envoi...";
-        }
-
         window.addEventListener("DOMContentLoaded", () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get("submitted") === "true") {
-                document.getElementById("message").innerText = "Votre dossier a bien été transmis.";
-            }
-
-            // Validation cases conformité
             const form = document.querySelector("form");
             form.addEventListener("submit", function (e) {
                 const checks = document.querySelectorAll(".check-conformite");
@@ -71,7 +64,7 @@
     <img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height: 150px; display: block; margin: 0 auto 20px auto;"/>
     <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em;">Formulaire de dépôt CNAPS</h2>
 
-    <form action="/submit" enctype="multipart/form-data" method="POST" onsubmit="showMessage()" style="text-align: left; margin-top: 20px;">
+    <form action="/submit" enctype="multipart/form-data" method="POST" style="text-align: left; margin-top: 20px;">
         <label>Nom :</label><input name="nom" required type="text"/>
         <label>Prénom :</label><input name="prenom" required type="text"/>
         <label>Email :</label><input name="email" required type="email"/>
@@ -110,7 +103,6 @@
         </div>
 
         <button type="submit">Envoyer</button>
-        <div id="message-area" style="font-size: 1.3em; margin-top: 15px; font-weight: bold; text-align: center;"></div>
     </form>
 </div>
 
