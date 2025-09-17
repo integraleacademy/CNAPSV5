@@ -24,7 +24,6 @@ DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-
 # -----------------------
 # Fonctions utilitaires
 # -----------------------
@@ -54,6 +53,7 @@ def convert_to_pdf(filepath, output_filename):
             shutil.copy(filepath, pdf_path)
             return os.path.basename(pdf_path)
 
+        # Tentative d'ouverture en image
         try:
             img = Image.open(filepath)
             if getattr(img, "is_animated", False):
@@ -84,10 +84,39 @@ def convert_to_pdf(filepath, output_filename):
         print(f"[ERROR] Conversion échouée : {e}")
         return None
 
-
 # -----------------------
 # Gestion des emails
 # -----------------------
+
+def send_email_notification(user_email, user_name):
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_user = os.environ.get("EMAIL_USER")
+    smtp_password = os.environ.get("EMAIL_PASSWORD")
+
+    if not smtp_user or not smtp_password:
+        print("Email environment variables not set.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Confirmation de dépôt de dossier CNAPS - Intégrale Academy"
+        msg["From"] = smtp_user
+        msg["To"] = user_email
+        msg.set_content(f"""Bonjour {user_name},
+
+Nous avons bien reçu votre dossier CNAPS. Il est en cours de traitement.
+
+Merci pour votre confiance,
+L’équipe Intégrale Academy.""")
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email : {e}")
 
 def send_non_conforme_email(user_email, user_name, comment, dossier, data):
     smtp_server = "smtp.gmail.com"
@@ -121,7 +150,7 @@ L’équipe Intégrale Academy
           </p>
           <p><b>Détail :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
-            <a href="{url_for('index', _external=True)}" 
+            <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
                🔄 Déposer une nouvelle demande
             </a>
@@ -133,6 +162,7 @@ L’équipe Intégrale Academy
     </html>
     """
 
+    # On stocke le HTML du mail pour l’aperçu admin
     dossier["dernier_mail_non_conforme"] = contenu_html
     save_data(data)
 
@@ -156,7 +186,6 @@ L’équipe Intégrale Academy
 
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
-
 
 def send_conforme_email(user_email, user_name, dossier, data):
     smtp_server = "smtp.gmail.com"
@@ -188,6 +217,7 @@ L’équipe Intégrale Academy
     </html>
     """
 
+    # On stocke le HTML du mail pour l’aperçu admin
     dossier["dernier_mail_conforme"] = contenu_html
     save_data(data)
 
@@ -212,7 +242,6 @@ L’équipe Intégrale Academy
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email CONFORME : {e}")
 
-
 # -----------------------
 # Routes Flask
 # -----------------------
@@ -226,6 +255,9 @@ def submit():
     nom = clean_filename(request.form['nom'])
     prenom = clean_filename(request.form['prenom'])
     email = request.form['email']
+
+    # Si tu veux garder l'accusé de réception :
+    # send_email_notification(email, f"{prenom} {nom}")
 
     fichiers = []
     id_files = request.files.getlist('id_files')
@@ -298,4 +330,61 @@ def set_status():
         data[index]["statut"] = status
 
         if status == "non conforme":
-            nom_prenom = f"{data[index]['prenom']} {
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            commentaire = data[index].get("commentaire", "Aucun commentaire")
+            send_non_conforme_email(
+                data[index]["email"],
+                nom_prenom,
+                commentaire,
+                data[index],
+                data
+            )
+            data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        elif status == "conforme":
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            send_conforme_email(
+                data[index]["email"],
+                nom_prenom,
+                data[index],
+                data
+            )
+            data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        save_data(data)
+
+    return redirect(url_for('admin'))
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    index = int(request.form['index'])
+    data = load_data()
+    if 0 <= index < len(data):
+        for fichier in data[index]["fichiers"]:
+            try:
+                os.remove(os.path.join(UPLOAD_FOLDER, fichier))
+            except Exception:
+                pass
+        data.pop(index)
+        save_data(data)
+    return redirect(url_for('admin'))
+
+@app.route('/download', methods=['POST'])
+def download():
+    index = int(request.form['index'])
+    data = load_data()
+    dossier = data[index]
+    zip_path = os.path.join(UPLOAD_FOLDER, f"{dossier['nom']}_{dossier['prenom']}.zip")
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for fichier in dossier["fichiers"]:
+            file_path = os.path.join(UPLOAD_FOLDER, fichier)
+            if os.path.exists(file_path):
+                zipf.write(file_path, fichier)
+    return send_file(zip_path, as_attachment=True)
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        return "Fichier introuvable", 404
+    return send_file(path)
