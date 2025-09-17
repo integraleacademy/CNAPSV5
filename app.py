@@ -130,7 +130,7 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#27ae60;">✅ Confirmation de dépôt documents CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous avons bien reçu vos documents afin que nous puissions transmettre une demande d'autorisation auprès du CNAPS - Ministère de l'intérieur <span style="color:green; font-weight:bold;">transmis</span>.</p>
+          <p>Nous avons bien reçu vos documents afin que nous puissions transmettre une demande d'autorisation auprès du<span style="color:green; font-weight:bold;">CNAPS - Ministère de l'intérieur</span>.</p>
           <p>Nous reviendrons vers vous dans les meilleurs délais après vérification de vos documents.</p>
           <p>Merci par avance.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
@@ -204,7 +204,7 @@ L’équipe Intégrale Academy
           <p>Bonjour <strong>{user_name}</strong>,</p>
           <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
           <p>Nous avons <strong>procédé à la demande d'autorisation préalable auprès du CNAPS</strong>.</p>
-          <p>Le CNAPS va désormais procéder à une enquête administrative (vérification des antécédants judiciaires). Dès que l'enquête sera terminée, vous recevrez l'autorisation par courrier postal à votre domicile.</p>
+          <p>Le CNAPS va désormais procéder à une enquête administrative (vérification des antécédents judiciaires). Dès que l'enquête sera terminée, vous recevrez l'autorisation par courrier postal à votre domicile.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
