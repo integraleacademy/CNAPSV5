@@ -154,26 +154,26 @@ L’équipe Intégrale Academy
         <html>
           <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
             <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-              <h2 style="color:#c0392b;">❌ Documents non conformes</h2>
+              <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
               <p>Bonjour <strong>{user_name}</strong>,</p>
-              <p>Après vérification, vos documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+              <p>Après vérification, vos documents transmis pour la demande d'autorisation préalable CNAPS - Ministère de l'intérieur <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
               
               <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-                ⚠️ <strong>Il est très important de fournir uniquement les documents demandés</strong> 
-                (voir la liste précisée sur le formulaire).
+                ⚠️ <strong>Nous vous demandons de bien vouloir fournir des documents conformes à la réglementation en vigueur</strong> 
+                (voir précision sur le formulaire).
               </p>
               
-              <p><b>Commentaire de l’administration :</b><br/>
+              <p><b>Détail des non-conformités :</b><br/>
               <em>{comment}</em></p>
 
               <div style="text-align:center; margin:20px 0;">
                 <a href="{url_for('index', _external=True)}" 
                    style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
-                   🔄 Refaire le dépôt de documents
+                   🔄 Déposer une nouvelle demande
                 </a>
               </div>
 
-              <p>Merci de bien vouloir recommencer la procédure dès que possible.</p>
+              <p>Nous vous remercions de bien vouloir nous faire parvenir les documents conformes dès que possible.</p>
               <p>L’équipe <strong>Intégrale Academy</strong></p>
             </div>
           </body>
