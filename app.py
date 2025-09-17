@@ -164,7 +164,6 @@ L’équipe Intégrale Academy
     </html>
     """
 
-    # On sauvegarde le mail dans le dossier
     dossier["dernier_mail_non_conforme"] = contenu_html
 
     if not smtp_user or not smtp_password:
@@ -187,6 +186,60 @@ L’équipe Intégrale Academy
 
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email NON CONFORME : {e}")
+
+
+def send_conforme_email(user_email, user_name, dossier):
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_user = os.environ.get("EMAIL_USER")
+    smtp_password = os.environ.get("EMAIL_PASSWORD")
+
+    contenu_txt = f"""Bonjour {user_name},
+
+Vos documents transmis sont conformes ✅
+Nous allons procéder à la demande d'autorisation préalable auprès du CNAPS.
+
+Merci pour votre confiance,
+L’équipe Intégrale Academy
+"""
+
+    contenu_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
+          <h2 style="color:#27ae60;">✅ Documents conformes</h2>
+          <p>Bonjour <strong>{user_name}</strong>,</p>
+          <p>Vos documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous allons maintenant <strong>procéder à la demande d'autorisation auprès du CNAPS</strong>.</p>
+          <p>Merci pour votre confiance.</p>
+          <p>L’équipe <strong>Intégrale Academy</strong></p>
+        </div>
+      </body>
+    </html>
+    """
+
+    dossier["dernier_mail_conforme"] = contenu_html
+
+    if not smtp_user or not smtp_password:
+        print("Email environment variables not set.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Documents conformes - Intégrale Academy"
+        msg["From"] = smtp_user
+        msg["To"] = user_email
+        msg.set_content(contenu_txt)
+        msg.add_alternative(contenu_html, subtype="html")
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            print(f"[MAIL] Conforme envoyé à {user_email}")
+
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email CONFORME : {e}")
 
 
 # -----------------------
@@ -244,7 +297,8 @@ def submit():
         "statut": "",
         "mail_non_conforme_date": "",
         "mail_conforme_date": "",
-        "dernier_mail_non_conforme": ""
+        "dernier_mail_non_conforme": "",
+        "dernier_mail_conforme": ""
     })
     save_data(data)
 
@@ -272,14 +326,20 @@ def set_status():
     data = load_data()
     if 0 <= index < len(data):
         data[index]["statut"] = status
+
         if status == "non conforme":
             nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
             commentaire = data[index].get("commentaire", "Aucun commentaire")
             send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index])
             data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
         elif status == "conforme":
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            send_conforme_email(data[index]["email"], nom_prenom, data[index])
             data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
         save_data(data)
+
     return redirect(url_for('admin'))
 
 @app.route('/delete', methods=['POST'])
