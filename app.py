@@ -120,23 +120,13 @@ L’équipe Intégrale Academy.""")
         print(f"Erreur lors de l'envoi de l'email : {e}")
 
 
-def send_non_conforme_email(user_email, user_name, comment):
+def send_non_conforme_email(user_email, user_name, comment, dossier):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_user = os.environ.get("EMAIL_USER")
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
-    if not smtp_user or not smtp_password:
-        print("Email environment variables not set.")
-        return
-
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = "Documents non conformes - Intégrale Academy"
-        msg["From"] = smtp_user
-        msg["To"] = user_email
-
-        contenu_txt = f"""Bonjour {user_name},
+    contenu_txt = f"""Bonjour {user_name},
 
 Après vérification, vos documents transmis ne sont pas conformes.
 Merci de refaire la procédure en suivant le lien ci-dessous :
@@ -150,35 +140,42 @@ Cordialement,
 L’équipe Intégrale Academy
 """
 
-        contenu_html = f"""
-        <html>
-          <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-            <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-              <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
-              <p>Bonjour <strong>{user_name}</strong>,</p>
-              <p>Après vérification, vos documents transmis pour la demande d'autorisation préalable CNAPS - Ministère de l'intérieur <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
-              
-              <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-                ⚠️ <strong>Nous vous demandons de bien vouloir fournir des documents conformes à la réglementation en vigueur</strong> 
-                (voir précision sur le formulaire).
-              </p>
-              
-              <p><b>Détail des non-conformités :</b><br/>
-              <em>{comment}</em></p>
+    contenu_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
+          <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
+          <p>Bonjour <strong>{user_name}</strong>,</p>
+          <p>Après vérification, vos documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
+            ⚠️ <strong>Merci de fournir uniquement les documents demandés</strong>.
+          </p>
+          <p><b>Détail :</b><br/><em>{comment}</em></p>
+          <div style="text-align:center; margin:20px 0;">
+            <a href="{url_for('index', _external=True)}" 
+               style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
+               🔄 Déposer une nouvelle demande
+            </a>
+          </div>
+          <p>Merci de refaire la procédure dès que possible.</p>
+          <p>L’équipe <strong>Intégrale Academy</strong></p>
+        </div>
+      </body>
+    </html>
+    """
 
-              <div style="text-align:center; margin:20px 0;">
-                <a href="{url_for('index', _external=True)}" 
-                   style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
-                   🔄 Déposer une nouvelle demande
-                </a>
-              </div>
+    # On sauvegarde le mail dans le dossier
+    dossier["dernier_mail_non_conforme"] = contenu_html
 
-              <p>Nous vous remercions de bien vouloir nous faire parvenir les documents conformes dès que possible.</p>
-              <p>L’équipe <strong>Intégrale Academy</strong></p>
-            </div>
-          </body>
-        </html>
-        """
+    if not smtp_user or not smtp_password:
+        print("Email environment variables not set.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Documents non conformes - Intégrale Academy"
+        msg["From"] = smtp_user
+        msg["To"] = user_email
         msg.set_content(contenu_txt)
         msg.add_alternative(contenu_html, subtype="html")
 
@@ -245,7 +242,9 @@ def submit():
         "fichiers": fichiers,
         "commentaire": "",
         "statut": "",
-        "mail_non_conforme_date": ""
+        "mail_non_conforme_date": "",
+        "mail_conforme_date": "",
+        "dernier_mail_non_conforme": ""
     })
     save_data(data)
 
@@ -276,8 +275,10 @@ def set_status():
         if status == "non conforme":
             nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
             commentaire = data[index].get("commentaire", "Aucun commentaire")
-            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire)
+            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index])
             data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        elif status == "conforme":
+            data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
         save_data(data)
     return redirect(url_for('admin'))
 
