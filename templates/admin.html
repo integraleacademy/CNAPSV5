@@ -37,6 +37,10 @@
       {% endif %}
     {% endwith %}
 
+    <!-- Infos -->
+    <p>📂 Fichiers présents dans uploads : <strong>{{ file_count }}</strong></p>
+    <p>🗃️ Dossiers actifs dans la base : <strong>{{ dossier_count }}</strong></p>
+
     <!-- Bouton Vider la base -->
     <form method="post" action="{{ url_for('reset') }}" onsubmit="return confirm('⚠️ Êtes-vous sûr de vouloir vider toute la base et supprimer tous les fichiers ?');">
         <button type="submit" class="btn-reset">🗑️ Vider la base</button>
