@@ -160,11 +160,11 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
+          <h2 style="color:#c0392b;">❌ Documents CNAPS non conformes CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
           <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Merci de fournir uniquement les documents demandés.</strong>
+            ⚠️ <strong>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.</strong>
           </p>
           <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
@@ -199,8 +199,8 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS</strong>.</p>
+          <p>Nous revenons vers vous concernant la demande d'autorisation préalable CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Les services de l'Etat vont procéder à une enquête administrative (vérification des antécédents judiciaires). Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</strong>.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
