@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, send_file, url_for
+from flask import Flask, render_template, request, redirect, send_file, url_for, flash
 import os
 import json
 import smtplib
@@ -19,6 +19,7 @@ except Exception as e:
     HEIC_OK = False
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # nécessaire pour flash()
 UPLOAD_FOLDER = '/mnt/data/uploads'
 DATA_FILE = '/mnt/data/data.json'
 
@@ -223,7 +224,12 @@ def admin():
             if os.path.exists(os.path.join(UPLOAD_FOLDER, fichier)):
                 fichiers_existants.append(fichier)
         dossier["fichiers"] = fichiers_existants
-    return render_template('admin.html', data=data)
+
+    # Compteurs pour affichage
+    file_count = len(os.listdir(UPLOAD_FOLDER))
+    dossier_count = len(data)
+
+    return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
 
 @app.route('/delete', methods=['POST'])
 def delete():
@@ -262,4 +268,5 @@ def reset():
             os.remove(os.path.join(UPLOAD_FOLDER, f))
         except Exception:
             pass
+    flash("✅ Base et fichiers vidés avec succès.")
     return redirect(url_for('admin'))
