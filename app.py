@@ -228,8 +228,8 @@ def submit():
     fichiers = []
     id_files = request.files.getlist('id_files')
     domicile_file = request.files.get('domicile_file')
-    identite_hebergeant = request.files.get('identite_hebergeant')
-    attestation_hebergement = request.files.get('attestation_hebergement')
+    identite_hebergeant_files = request.files.getlist('identite_hebergeant')
+    attestation_hebergement_files = request.files.getlist('attestation_hebergement')
 
     def save_files(files, prefix, nom, prenom):
         paths = []
@@ -259,8 +259,8 @@ def submit():
 
     fichiers += save_files(id_files, "id", nom, prenom)
     fichiers += save_files([domicile_file], "domicile", nom, prenom)
-    fichiers += save_files([identite_hebergeant], "id_hebergeant", nom, prenom)
-    fichiers += save_files([attestation_hebergement], "attestation", nom, prenom)
+    fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
+    fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
 
     data = load_data()
     dossier = {
