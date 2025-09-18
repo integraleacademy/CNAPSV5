@@ -49,20 +49,16 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
+        # Si déjà PDF, on écrase l'ancien systématiquement
         if ext == '.pdf':
-            shutil.copy(filepath, pdf_path)
-            return os.path.basename(pdf_path)
+            try:
+                shutil.copy(filepath, pdf_path)
+                return os.path.basename(pdf_path)
+            except Exception as e:
+                print(f"[ERROR] Impossible d'écraser le PDF : {e}")
+                return None
 
-        try:
-            img = Image.open(filepath)
-            if getattr(img, "is_animated", False):
-                img.seek(0)
-            rgb_im = img.convert('RGB')
-            rgb_im.save(pdf_path)
-            return os.path.basename(pdf_path)
-        except Exception:
-            pass
-
+        # Images (jpg, png, heic, webp, tiff…)
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
                 return None
@@ -73,6 +69,7 @@ def convert_to_pdf(filepath, output_filename):
             rgb_im.save(pdf_path)
             return os.path.basename(pdf_path)
 
+        # Documents texte (Word, ODT, TXT, RTF)
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
             return os.path.basename(pdf_path)
@@ -165,19 +162,18 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande d'autorisation préalable auprès du CNAPS - Ministère de l'intérieur. Après vérification par nos services, les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p>Après vérification, les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
           <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur</strong>.
+            ⚠️ Merci de fournir uniquement les documents demandés.
           </p>
-          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
+          <p><b>Détail :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
             <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
                🔄 Déposer une nouvelle demande
             </a>
           </div>
-          <p>Nous vous remercions de bien vouloir nous faire parvenir une nouvelle demande dans les meilleurs délais.</p>
-          <p>Nous vous remercions par avance, L’équipe <strong>Intégrale Academy</strong></p>
+          <p>Cordialement, L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
     </html>
@@ -204,9 +200,9 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande d'autorisation préalable auprès du CNAPS - Ministère de l'intérieur. Les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS, qui va procéder à une enquête administrative (vérification des antécédents judiciaires). Vous recevrez votre autorisation par courrier postal à votre domicile. </strong>.</p>
-          <p>Nous vous souhaitons une bonne journée.</p>
+          <p>Les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous avons transmis la demande au CNAPS qui procédera à l’enquête administrative.</p>
+          <p>Vous recevrez votre autorisation par courrier postal.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -369,3 +365,10 @@ def uploaded_file(filename):
     if not os.path.exists(path):
         return "Fichier introuvable", 404
     return send_file(path)
+
+# -----------------------
+# robots.txt (éviter 404 des bots)
+# -----------------------
+@app.route('/robots.txt')
+def robots():
+    return "User-agent: *\nDisallow:", 200, {"Content-Type": "text/plain"}
