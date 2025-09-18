@@ -132,7 +132,7 @@ L’équipe Intégrale Academy
           <h2 style="color:#27ae60;">✅ Confirmation de dépôt CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
           <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
-          <p>Nous allons vérifier vos documents et reviendrons vers vous rapidement.</p>
+          <p>Nous allons à présent procéder à une vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -140,6 +140,76 @@ L’équipe Intégrale Academy
     """
 
     return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
+
+def send_non_conforme_email(user_email, user_name, comment, dossier, data):
+    contenu_txt = f"""Bonjour {user_name},
+
+Après vérification, vos documents transmis ne sont pas conformes.
+Merci de refaire la procédure en suivant le lien ci-dessous :
+{url_for('index', _external=True)}
+
+⚠️ Il est très important de fournir uniquement les documents demandés.
+
+Commentaire : {comment}
+
+Cordialement,
+L’équipe Intégrale Academy
+"""
+
+    contenu_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
+          <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
+          <p>Bonjour <strong>{user_name}</strong>,</p>
+          <p>Les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
+            ⚠️ <strong>Merci de fournir uniquement les documents demandés.</strong>
+          </p>
+          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
+          <div style="text-align:center; margin:20px 0;">
+            <a href="{url_for('index', _external=True)}"
+               style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
+               🔄 Déposer une nouvelle demande
+            </a>
+          </div>
+          <p>L’équipe <strong>Intégrale Academy</strong></p>
+        </div>
+      </body>
+    </html>
+    """
+
+    dossier["dernier_mail_non_conforme"] = contenu_html
+    save_data(data)
+    send_email(user_email, "Documents non conformes - Intégrale Academy", contenu_txt, contenu_html)
+
+def send_conforme_email(user_email, user_name, dossier, data):
+    contenu_txt = f"""Bonjour {user_name},
+
+Vos documents transmis sont conformes ✅
+Nous allons procéder à la demande d'autorisation préalable auprès du CNAPS.
+
+Merci pour votre confiance,
+L’équipe Intégrale Academy
+"""
+
+    contenu_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
+          <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
+          <p>Bonjour <strong>{user_name}</strong>,</p>
+          <p>Les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS</strong>.</p>
+          <p>L’équipe <strong>Intégrale Academy</strong></p>
+        </div>
+      </body>
+    </html>
+    """
+
+    dossier["dernier_mail_conforme"] = contenu_html
+    save_data(data)
+    send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
 
 # -----------------------
 # Routes Flask
@@ -231,6 +301,48 @@ def admin():
 
     return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
 
+@app.route('/save_comment', methods=['POST'])
+def save_comment():
+    index = int(request.form['index'])
+    comment = request.form['commentaire']
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]["commentaire"] = comment
+        save_data(data)
+    return redirect(url_for('admin'))
+
+@app.route('/set_status', methods=['POST'])
+def set_status():
+    index = int(request.form['index'])
+    status = request.form['status']
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]["statut"] = status
+
+        if status == "non conforme":
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            commentaire = data[index].get("commentaire", "Aucun commentaire")
+            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index], data)
+            data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        elif status == "conforme":
+            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
+            send_conforme_email(data[index]["email"], nom_prenom, data[index], data)
+            data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        save_data(data)
+    return redirect(url_for('admin'))
+
+@app.route('/mail_preview/<int:index>/<status>')
+def mail_preview(index, status):
+    data = load_data()
+    if 0 <= index < len(data):
+        if status == "conforme":
+            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
+        elif status == "non_conforme":
+            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
+    return "Mail introuvable"
+
 @app.route('/delete', methods=['POST'])
 def delete():
     index = int(request.form['index'])
@@ -252,6 +364,19 @@ def delete():
         data.pop(index)
         save_data(data)
     return redirect(url_for('admin'))
+
+@app.route('/download', methods=['POST'])
+def download():
+    index = int(request.form['index'])
+    data = load_data()
+    dossier = data[index]
+    zip_path = os.path.join(UPLOAD_FOLDER, f"{dossier['nom']}_{dossier['prenom']}.zip")
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for fichier in dossier["fichiers"]:
+            file_path = os.path.join(UPLOAD_FOLDER, fichier)
+            if os.path.exists(file_path):
+                zipf.write(file_path, fichier)
+    return send_file(zip_path, as_attachment=True)
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
