@@ -131,11 +131,11 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Confirmation de dépôt</h2>
+          <h2 style="color:#27ae60;">✅ Confirmation de dépôt CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
           <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
-          <p>Vous recevrez un retour de l’équipe Intégrale Academy après vérification de vos documents.</p>
-          <p>Merci pour votre confiance.</p>
+          <p>Nous allons à présent procéder à une vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
+          <p>Nous vous souhaitons une bonne journée.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
@@ -165,19 +165,19 @@ L’équipe Intégrale Academy
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
           <h2 style="color:#c0392b;">❌ Documents non conformes CNAPS</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Après vérification, vos documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+          <p>Nous revenons vers vous concernant la demande d'autorisation préalable auprès du CNAPS - Ministère de l'intérieur. Après vérification par nos services, les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
           <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Merci de fournir uniquement les documents demandés</strong>.
+            ⚠️ <strong>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur</strong>.
           </p>
-          <p><b>Détail :</b><br/><em>{comment}</em></p>
+          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
           <div style="text-align:center; margin:20px 0;">
             <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
                🔄 Déposer une nouvelle demande
             </a>
           </div>
-          <p>Merci de refaire la procédure dès que possible.</p>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
+          <p>Nous vous remercions de bien vouloir nous faire parvenir une nouvelle demande dans les meilleurs délais.</p>
+          <p>Nous vous remercions par avance, L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
     </html>
@@ -202,11 +202,11 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Documents conformes</h2>
+          <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Vos documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous allons maintenant <strong>procéder à la demande d'autorisation auprès du CNAPS</strong>.</p>
-          <p>Merci pour votre confiance.</p>
+          <p>Nous revenons vers vous concernant la demande d'autorisation préalable auprès du CNAPS - Ministère de l'intérieur. Les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
+          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS, qui va procéder à une enquête administrative (vérification des antécédents judiciaires). Vous recevrez votre autorisation par courrier postal à votre domicile. </strong>.</p>
+          <p>Nous vous souhaitons une bonne journée.</p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
