@@ -49,20 +49,17 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
-        # Supprimer un ancien PDF s'il existe
         if os.path.exists(pdf_path):
             try:
                 os.remove(pdf_path)
             except Exception:
                 pass
 
-        # Si c'est déjà un PDF → déplacer/renommer
         if ext == '.pdf':
             if os.path.abspath(filepath) != os.path.abspath(pdf_path):
                 shutil.move(filepath, pdf_path)
             return os.path.basename(pdf_path)
 
-        # Images
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
                 return None
@@ -73,7 +70,6 @@ def convert_to_pdf(filepath, output_filename):
             rgb_im.save(pdf_path)
             return os.path.basename(pdf_path)
 
-        # Documents texte
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
             return os.path.basename(pdf_path)
@@ -221,7 +217,6 @@ def confirmation():
 @app.route('/admin')
 def admin():
     data = load_data()
-    # Nettoyage des fichiers fantômes
     for dossier in data:
         fichiers_existants = []
         for fichier in dossier.get("fichiers", []):
@@ -236,13 +231,11 @@ def delete():
     data = load_data()
     if 0 <= index < len(data):
         dossier = data[index]
-        # Supprimer tous les fichiers liés
         for fichier in dossier["fichiers"]:
             try:
                 os.remove(os.path.join(UPLOAD_FOLDER, fichier))
             except Exception:
                 pass
-        # Supprimer aussi tout fichier fantôme commençant par NOM_PRENOM_
         prefix = f"{dossier['nom']}_{dossier['prenom']}_"
         for f in os.listdir(UPLOAD_FOLDER):
             if f.startswith(prefix):
@@ -260,3 +253,13 @@ def uploaded_file(filename):
     if not os.path.exists(path):
         return "Fichier introuvable", 404
     return send_file(path)
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    save_data([])  # vider data.json
+    for f in os.listdir(UPLOAD_FOLDER):
+        try:
+            os.remove(os.path.join(UPLOAD_FOLDER, f))
+        except Exception:
+            pass
+    return redirect(url_for('admin'))
