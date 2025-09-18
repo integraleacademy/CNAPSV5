@@ -49,16 +49,20 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
-        # Si déjà PDF, on écrase l'ancien systématiquement
-        if ext == '.pdf':
+        # Supprimer un ancien PDF s'il existe
+        if os.path.exists(pdf_path):
             try:
-                shutil.copy(filepath, pdf_path)
-                return os.path.basename(pdf_path)
-            except Exception as e:
-                print(f"[ERROR] Impossible d'écraser le PDF : {e}")
-                return None
+                os.remove(pdf_path)
+            except Exception:
+                pass
 
-        # Images (jpg, png, heic, webp, tiff…)
+        # Si c'est déjà un PDF → on déplace/renomme directement
+        if ext == '.pdf':
+            if os.path.abspath(filepath) != os.path.abspath(pdf_path):
+                shutil.move(filepath, pdf_path)
+            return os.path.basename(pdf_path)
+
+        # Images
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
                 return None
@@ -69,7 +73,7 @@ def convert_to_pdf(filepath, output_filename):
             rgb_im.save(pdf_path)
             return os.path.basename(pdf_path)
 
-        # Documents texte (Word, ODT, TXT, RTF)
+        # Documents texte
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
             return os.path.basename(pdf_path)
@@ -241,6 +245,14 @@ def submit():
                 base_filename = f"{nom}_{prenom}_{prefix}_{i}"
                 orig_ext = os.path.splitext(file.filename)[1].lower()
                 temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
+
+                # Supprimer un ancien fichier identique avant de sauver
+                if os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except Exception:
+                        pass
+
                 file.save(temp_path)
                 converted = convert_to_pdf(temp_path, base_filename)
                 if converted:
@@ -365,10 +377,3 @@ def uploaded_file(filename):
     if not os.path.exists(path):
         return "Fichier introuvable", 404
     return send_file(path)
-
-# -----------------------
-# robots.txt (éviter 404 des bots)
-# -----------------------
-@app.route('/robots.txt')
-def robots():
-    return "User-agent: *\nDisallow:", 200, {"Content-Type": "text/plain"}
