@@ -170,7 +170,7 @@ L’équipe Intégrale Academy
           <div style="text-align:center; margin:20px 0;">
             <a href="{url_for('index', _external=True)}"
                style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
-               🔄 Déposer une nouvelle demande
+               🔄Veuillez déposer une nouvelle demande en cliquant ici
             </a>
           </div>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
@@ -200,7 +200,7 @@ L’équipe Intégrale Academy
           <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
           <p>Nous revenons vers vous concernant la demande d'autorisation préalable CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons <strong>transmis la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Les services de l'Etat vont procéder à une enquête administrative (vérification des antécédents judiciaires). Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</strong>.</p>
+          <p>Nous avons transmis la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Les services de l'Etat vont procéder à une enquête administrative (vérification des antécédents judiciaires). <strong> Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</strong></p>
           <p>L’équipe <strong>Intégrale Academy</strong></p>
         </div>
       </body>
