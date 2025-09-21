@@ -14,6 +14,7 @@ try:
     import pillow_heif
     pillow_heif.register_heif_opener()
     HEIC_OK = True
+    print("[INFO] pillow-heif chargé -> HEIC support activé")
 except Exception as e:
     print(f"[WARNING] HEIC non activé: {e}")
     HEIC_OK = False
@@ -50,6 +51,7 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
+        # cleanup if exists
         if os.path.exists(pdf_path):
             try:
                 os.remove(pdf_path)
@@ -57,28 +59,63 @@ def convert_to_pdf(filepath, output_filename):
                 pass
 
         if ext == '.pdf':
+            # move only if different
             if os.path.abspath(filepath) != os.path.abspath(pdf_path):
                 shutil.move(filepath, pdf_path)
             return os.path.basename(pdf_path)
 
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
+                print(f"[ERROR] HEIC reçu mais pillow-heif non disponible pour {filepath}")
+                # supprimer le fichier temporaire laissé
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
                 return None
             image = Image.open(filepath)
+            # si animation, on prend la première frame
             if getattr(image, "is_animated", False):
                 image.seek(0)
             rgb_im = image.convert('RGB')
             rgb_im.save(pdf_path)
+            # supprimer le fichier source (inutile après conversion)
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
             return os.path.basename(pdf_path)
 
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
-            pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
-            return os.path.basename(pdf_path)
+            try:
+                pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+                return os.path.basename(pdf_path)
+            except Exception as e:
+                print(f"[ERROR] pypandoc conversion echouee pour {filepath}: {e}")
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+                return None
 
-        return None
+        else:
+            print(f"[ERROR] Extension non supportee pour {filepath} -> {ext}")
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+            return None
 
     except Exception as e:
-        print(f"[ERROR] Conversion échouée : {e}")
+        print(f"[ERROR] Conversion échouée pour {filepath} : {e}")
+        try:
+            os.remove(filepath)
+        except Exception:
+            pass
         return None
 
 # -----------------------
@@ -212,6 +249,53 @@ L’équipe Intégrale Academy
     send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
 
 # -----------------------
+# Helpers pour fichier
+# -----------------------
+
+def save_files(files, prefix, nom, prenom):
+    """
+    files: liste d'objets FileStorage (ou [None])
+    retourne liste des fichiers sauvés (noms relatifs dans UPLOAD_FOLDER)
+    """
+    paths = []
+    for i, file in enumerate(files):
+        # cas champ présent mais annulation sur mobile -> file.filename peut etre ""
+        if not file or not getattr(file, "filename", None) or file.filename.strip() == "":
+            print(f"[DEBUG] Aucun fichier sélectionné pour {prefix} ({nom} {prenom}) index {i}")
+            continue
+
+        # sécuriser le nom et l'extension
+        orig_ext = os.path.splitext(file.filename)[1].lower()
+        base_filename = f"{nom}_{prenom}_{prefix}_{i}"
+        temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
+
+        # supprimer ancien fichier temporaire si présent
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+        try:
+            file.save(temp_path)
+        except Exception as e:
+            print(f"[ERROR] Impossible d'enregistrer temporairement {temp_path} : {e}")
+            continue
+
+        # conversion en PDF (ou acceptation si pdf)
+        converted = convert_to_pdf(temp_path, base_filename)
+        if converted:
+            # converted est le nom du fichier pdf dans UPLOAD_FOLDER
+            paths.append(converted)
+            print(f"[INFO] Fichier sauvegardé: {converted}")
+        else:
+            print(f"[ERROR] Conversion impossible pour {temp_path} -> fichier ignoré")
+            # temp_path est déjà supprimé par convert_to_pdf en cas d'erreur
+            continue
+
+    return paths
+
+# -----------------------
 # Routes Flask
 # -----------------------
 
@@ -221,47 +305,35 @@ def index():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    nom = clean_filename(request.form['nom'])
-    prenom = clean_filename(request.form['prenom'])
-    email = request.form['email']
+    nom = clean_filename(request.form.get('nom', ''))
+    prenom = clean_filename(request.form.get('prenom', ''))
+    email = request.form.get('email', '')
 
-    fichiers = []
-    id_files = request.files.getlist('id_files')
+    # Récupération brute des fichiers depuis la requête
+    id_files = request.files.getlist('id_files') or []
     domicile_file = request.files.get('domicile_file')
-    identite_hebergeant_files = request.files.getlist('identite_hebergeant')
-    attestation_hebergement_files = request.files.getlist('attestation_hebergement')
+    identite_hebergeant_files = request.files.getlist('identite_hebergeant') or []
+    attestation_hebergement_files = request.files.getlist('attestation_hebergement') or []
 
-    def save_files(files, prefix, nom, prenom):
-        paths = []
-        for i, file in enumerate(files):
-            if file and file.filename:
-                base_filename = f"{nom}_{prenom}_{prefix}_{i}"
-                orig_ext = os.path.splitext(file.filename)[1].lower()
-                temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
-
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                    except Exception:
-                        pass
-
-                file.save(temp_path)
-                converted = convert_to_pdf(temp_path, base_filename)
-                if converted:
-                    final_path = os.path.join(UPLOAD_FOLDER, converted)
-                    if os.path.abspath(final_path) != os.path.abspath(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except Exception:
-                            pass
-                    paths.append(converted)
-        return paths
-
+    # sauvegarde effective
+    fichiers = []
     fichiers += save_files(id_files, "id", nom, prenom)
-    fichiers += save_files([domicile_file], "domicile", nom, prenom)
+    fichiers += save_files([domicile_file] if domicile_file else [], "domicile", nom, prenom)
     fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
     fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
 
+    # ---- sécurité : aucun fichier exploitable -> on stoppe ici et on informe l'utilisateur
+    if not fichiers:
+        # message utile pour l'utilisateur
+        msg = ("⚠️ Aucun fichier valide reçu. "
+               "Vérifiez que vous avez bien sélectionné vos pièces (photos en JPEG/PDF) "
+               "et évitez les HEIC si le site affiche une erreur. Si vous êtes sur iPhone, "
+               "sélectionnez la photo en choisissant 'Plus compatible' ou convertissez-la en JPEG.")
+        flash(msg)
+        print(f"[WARN] Tentative de soumission sans fichiers valides pour {prenom} {nom} - email: {email}")
+        return redirect(url_for("index"))
+
+    # fabriquer le dossier
     data = load_data()
     dossier = {
         "nom": nom,
@@ -278,7 +350,10 @@ def submit():
     data.append(dossier)
     save_data(data)
 
+    # n'envoyer la confirmation que si on a au moins un fichier
     send_accuse_reception(email, f"{prenom} {nom}")
+    print(f"[INFO] Dossier enregistre pour {prenom} {nom} ({len(fichiers)} fichiers)")
+
     return redirect(url_for('confirmation'))
 
 @app.route('/confirmation')
@@ -395,3 +470,6 @@ def reset():
             pass
     flash("✅ Base et fichiers vidés avec succès.")
     return redirect(url_for('admin'))
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
