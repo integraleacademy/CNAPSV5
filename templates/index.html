@@ -30,7 +30,7 @@
             align-items: flex-start;
             gap: 10px;
             margin: 10px 0;
-            font-size: 16px !important;   /* ✅ taille fixe identique partout */
+            font-size: 16px !important;
             font-weight: normal !important;
             line-height: 1.5;
             color: #000;
@@ -39,6 +39,15 @@
             margin-top: 4px;
             flex-shrink: 0;
             transform: scale(1.2);
+        }
+        .flash-message {
+            background:#ffdddd;
+            padding:10px;
+            border:1px solid red;
+            margin-bottom:15px;
+            border-radius:5px;
+            color:#900;
+            font-weight:bold;
         }
 </style>
 <script>
@@ -68,6 +77,13 @@
     <img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height: 150px; display: block; margin: 0 auto 20px auto;"/>
     <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.8em;">Formulaire de dépôt CNAPS</h2>
 
+    <!-- ✅ affichage des flash messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-message">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+
     <form action="/submit" enctype="multipart/form-data" method="POST" style="text-align: left; margin-top: 20px;">
         <label>Nom :</label><input name="nom" required type="text"/>
         <label>Prénom :</label><input name="prenom" required type="text"/>
@@ -75,13 +91,13 @@
         
         <label>1 - Carte d'identité RECTO ET VERSO / Passeport / Titre de séjour :</label>
         <div id="id-files-container">
-            <input multiple name="id_files" required type="file"/>
+            <input multiple name="id_files" required type="file" accept=".pdf,.jpg,.jpeg,.png"/>
             <button id="add-id-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
         </div>
 
         <label>2 - Justificatif de domicile DE MOINS DE 3 MOIS :</label>
         <strong>ATTENTION : Bien vérifier que le justificatif de domicile a moins de 3 mois. Uniquement facture de gaz, d'électricité, d'eau ou quittance de loyer (PAS de facture de téléphone)</strong>
-        <input name="domicile_file" required type="file"/>
+        <input name="domicile_file" required type="file" accept=".pdf,.jpg,.jpeg,.png"/>
 
         <label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">
             3 - Si vous êtes hébergé(e), cochez la case 
@@ -90,18 +106,18 @@
         <div id="heberge_section" style="display: none;">
             <label>Pièce d'identité de l'hébergeant - ATTENTION : RECTO ET VERSO :</label>
             <div id="hebergeant-files-container">
-                <input name="identite_hebergeant" type="file"/>
+                <input name="identite_hebergeant" type="file" multiple accept=".pdf,.jpg,.jpeg,.png"/>
                 <button id="add-hebergeant-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
             </div>
-            <label>Attestation d'hébergement en utilisant ce modèle https://www.service-public.fr/simulateur/calcul/AttestationHebergement :</label>
-            <input name="attestation_hebergement" type="file"/>
+            <label>Attestation d'hébergement :</label>
+            <input name="attestation_hebergement" type="file" multiple accept=".pdf,.jpg,.jpeg,.png"/>
         </div>
 
         <!-- Nouvelle section Contrôle de conformité -->
         <div class="conformite-box">
             <h3>🔍 Contrôle de conformité</h3>
             <label><input type="checkbox" class="check-conformite"/> J'ai bien fourni ma carte d'identité RECTO et VERSO (face avant, face arrière) ou mon passeport.</label>
-            <label><input type="checkbox" class="check-conformite"/> Les documents que j'ai fourni sont bien LISIBLES et ne sont pas flous.</label>
+            <label><input type="checkbox" class="check-conformite"/> Les documents que j'ai fournis sont bien LISIBLES et ne sont pas flous.</label>
             <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile a bien MOINS DE 3 MOIS.</label>
             <label><input type="checkbox" class="check-conformite"/> Mon justificatif de domicile N'EST PAS UNE FACTURE DE TÉLÉPHONE.</label>
             <label><input type="checkbox" class="check-conformite"/> Si je suis hébergé, j'ai bien fourni la pièce d'identité de mon hébergeant RECTO et VERSO (face avant, face arrière).</label>
@@ -120,6 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
     newInput.type = "file";
     newInput.name = "id_files";
     newInput.required = true;
+    newInput.accept = ".pdf,.jpg,.jpeg,.png";
     container.insertBefore(newInput, addButton);
   });
 });
@@ -133,6 +150,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const newInput = document.createElement("input");
     newInput.type = "file";
     newInput.name = "identite_hebergeant";
+    newInput.accept = ".pdf,.jpg,.jpeg,.png";
     containerHebergeant.insertBefore(newInput, addHebergeant);
   });
 });
