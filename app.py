@@ -245,6 +245,17 @@ def admin():
     dossier_count = len(data)
     return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
 
+# ✅ route qui manquait !
+@app.route('/mail_preview/<int:index>/<status>')
+def mail_preview(index, status):
+    data = load_data()
+    if 0 <= index < len(data):
+        if status == "conforme":
+            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
+        elif status == "non_conforme":
+            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
+    return "Mail introuvable"
+
 @app.route('/delete', methods=['POST'])
 def delete():
     index = int(request.form['index'])
