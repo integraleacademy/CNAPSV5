@@ -20,14 +20,14 @@ except Exception as e:
     HEIC_OK = False
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # nécessaire pour flash()
+app.secret_key = "supersecretkey"
 UPLOAD_FOLDER = '/mnt/data/uploads'
 DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # -----------------------
-# Fonctions utilitaires
+# Utilitaires JSON
 # -----------------------
 
 def load_data():
@@ -46,68 +46,49 @@ def save_data(data):
 def clean_filename(text):
     return text.strip().replace(" ", "_").replace("'", "").replace('"', '')
 
+# -----------------------
+# Conversion fichiers
+# -----------------------
+
 def convert_to_pdf(filepath, output_filename):
     ext = os.path.splitext(filepath)[1].lower()
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
-        # cleanup if exists
         if os.path.exists(pdf_path):
-            try:
-                os.remove(pdf_path)
-            except Exception:
-                pass
+            os.remove(pdf_path)
 
         if ext == '.pdf':
-            # move only if different
             if os.path.abspath(filepath) != os.path.abspath(pdf_path):
                 shutil.move(filepath, pdf_path)
             return os.path.basename(pdf_path)
 
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
-                print(f"[ERROR] HEIC reçu mais pillow-heif non disponible pour {filepath}")
-                # supprimer le fichier temporaire laissé
-                try:
-                    os.remove(filepath)
-                except Exception:
-                    pass
+                print(f"[ERROR] HEIC reçu mais pillow-heif non dispo: {filepath}")
+                os.remove(filepath)
                 return None
             image = Image.open(filepath)
-            # si animation, on prend la première frame
             if getattr(image, "is_animated", False):
                 image.seek(0)
             rgb_im = image.convert('RGB')
             rgb_im.save(pdf_path)
-            # supprimer le fichier source (inutile après conversion)
-            try:
-                os.remove(filepath)
-            except Exception:
-                pass
+            os.remove(filepath)
             return os.path.basename(pdf_path)
 
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             try:
                 pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
-                try:
-                    os.remove(filepath)
-                except Exception:
-                    pass
+                os.remove(filepath)
                 return os.path.basename(pdf_path)
             except Exception as e:
-                print(f"[ERROR] pypandoc conversion echouee pour {filepath}: {e}")
-                try:
-                    os.remove(filepath)
-                except Exception:
-                    pass
+                print(f"[ERROR] pypandoc échoué: {filepath} -> {e}")
+                os.remove(filepath)
                 return None
 
         else:
-            print(f"[ERROR] Extension non supportee pour {filepath} -> {ext}")
-            try:
-                os.remove(filepath)
-            except Exception:
-                pass
+            print(f"[ERROR] Extension non supportée: {filepath}")
+            os.remove(filepath)
             return None
 
     except Exception as e:
@@ -119,7 +100,7 @@ def convert_to_pdf(filepath, output_filename):
         return None
 
 # -----------------------
-# Gestion des emails
+# Envoi mails
 # -----------------------
 
 def send_email(user_email, subject, contenu_txt, contenu_html):
@@ -129,7 +110,7 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
     if not smtp_user or not smtp_password:
-        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis dans Render")
+        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis")
         return False
 
     try:
@@ -147,151 +128,43 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
 
         print(f"📧 Mail '{subject}' envoyé à {user_email}")
         return True
-
     except Exception as e:
-        print(f"⚠️ Erreur lors de l'envoi du mail ({subject}) à {user_email} : {e}")
+        print(f"⚠️ Erreur mail {subject} -> {e}")
         return False
 
 def send_accuse_reception(user_email, user_name):
-    contenu_txt = f"""Bonjour {user_name},
-
-Votre dossier a bien été transmis ✅
-Vous recevrez un retour de l’équipe Intégrale Academy après vérification.
-
-Merci pour votre confiance,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Confirmation de dépôt CNAPS</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
-          <p>Nous allons à présent procéder à une vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
-        </div>
-      </body>
-    </html>
-    """
-
+    contenu_txt = f"Bonjour {user_name},\n\nVotre dossier a bien été transmis ✅"
+    contenu_html = f"<p>Bonjour <b>{user_name}</b>,<br/>Votre dossier a bien été transmis ✅</p>"
     return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
 
-def send_non_conforme_email(user_email, user_name, comment, dossier, data):
-    contenu_txt = f"""Bonjour {user_name},
-
-Après vérification, vos documents transmis ne sont pas conformes.
-Merci de refaire la procédure en suivant le lien ci-dessous :
-{url_for('index', _external=True)}
-
-⚠️ Il est très important de fournir uniquement les documents demandés.
-
-Commentaire : {comment}
-
-Cordialement,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#c0392b;">❌ Documents CNAPS non conformes CNAPS</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
-          <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.</strong>
-          </p>
-          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
-          <div style="text-align:center; margin:20px 0;">
-            <a href="{url_for('index', _external=True)}"
-               style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
-               🔄Veuillez déposer une nouvelle demande en cliquant ici
-            </a>
-          </div>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
-        </div>
-      </body>
-    </html>
-    """
-
-    dossier["dernier_mail_non_conforme"] = contenu_html
-    save_data(data)
-    send_email(user_email, "Documents non conformes - Intégrale Academy", contenu_txt, contenu_html)
-
-def send_conforme_email(user_email, user_name, dossier, data):
-    contenu_txt = f"""Bonjour {user_name},
-
-Vos documents transmis sont conformes ✅
-Nous allons procéder à la demande d'autorisation préalable auprès du CNAPS.
-
-Merci pour votre confiance,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande d'autorisation préalable CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons transmis la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Les services de l'Etat vont procéder à une enquête administrative (vérification des antécédents judiciaires). <strong> Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</strong></p>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
-        </div>
-      </body>
-    </html>
-    """
-
-    dossier["dernier_mail_conforme"] = contenu_html
-    save_data(data)
-    send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
-
 # -----------------------
-# Helpers pour fichier
+# Sauvegarde fichiers
 # -----------------------
 
 def save_files(files, prefix, nom, prenom):
-    """
-    files: liste d'objets FileStorage (ou [None])
-    retourne liste des fichiers sauvés (noms relatifs dans UPLOAD_FOLDER)
-    """
     paths = []
     for i, file in enumerate(files):
-        # cas champ présent mais annulation sur mobile -> file.filename peut etre ""
         if not file or not getattr(file, "filename", None) or file.filename.strip() == "":
             print(f"[DEBUG] Aucun fichier sélectionné pour {prefix} ({nom} {prenom}) index {i}")
             continue
 
-        # sécuriser le nom et l'extension
         orig_ext = os.path.splitext(file.filename)[1].lower()
         base_filename = f"{nom}_{prenom}_{prefix}_{i}"
         temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
 
-        # supprimer ancien fichier temporaire si présent
-        if os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except Exception:
-                pass
-
         try:
             file.save(temp_path)
+            print(f"[DEBUG] Sauvegarde fichier brut: {temp_path}")
         except Exception as e:
-            print(f"[ERROR] Impossible d'enregistrer temporairement {temp_path} : {e}")
+            print(f"[ERROR] Impossible d'écrire {temp_path}: {e}")
             continue
 
-        # conversion en PDF (ou acceptation si pdf)
         converted = convert_to_pdf(temp_path, base_filename)
         if converted:
-            # converted est le nom du fichier pdf dans UPLOAD_FOLDER
-            paths.append(converted)
             print(f"[INFO] Fichier sauvegardé: {converted}")
+            paths.append(converted)
         else:
-            print(f"[ERROR] Conversion impossible pour {temp_path} -> fichier ignoré")
-            # temp_path est déjà supprimé par convert_to_pdf en cas d'erreur
-            continue
+            print(f"[ERROR] Conversion échouée pour {temp_path}")
 
     return paths
 
@@ -309,31 +182,24 @@ def submit():
     prenom = clean_filename(request.form.get('prenom', ''))
     email = request.form.get('email', '')
 
-    # Récupération brute des fichiers depuis la requête
     id_files = request.files.getlist('id_files') or []
     domicile_file = request.files.get('domicile_file')
     identite_hebergeant_files = request.files.getlist('identite_hebergeant') or []
     attestation_hebergement_files = request.files.getlist('attestation_hebergement') or []
 
-    # sauvegarde effective
     fichiers = []
     fichiers += save_files(id_files, "id", nom, prenom)
     fichiers += save_files([domicile_file] if domicile_file else [], "domicile", nom, prenom)
     fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
     fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
 
-    # ---- sécurité : aucun fichier exploitable -> on stoppe ici et on informe l'utilisateur
+    print(f"[DEBUG] fichiers collectés pour {prenom} {nom}: {fichiers}")
+
     if not fichiers:
-        # message utile pour l'utilisateur
-        msg = ("⚠️ Aucun fichier valide reçu. "
-               "Vérifiez que vous avez bien sélectionné vos pièces (photos en JPEG/PDF) "
-               "et évitez les HEIC si le site affiche une erreur. Si vous êtes sur iPhone, "
-               "sélectionnez la photo en choisissant 'Plus compatible' ou convertissez-la en JPEG.")
-        flash(msg)
-        print(f"[WARN] Tentative de soumission sans fichiers valides pour {prenom} {nom} - email: {email}")
+        flash("⚠️ Aucun fichier valide reçu, merci de recommencer.")
+        print(f"[WARN] Aucun fichier valide pour {prenom} {nom}")
         return redirect(url_for("index"))
 
-    # fabriquer le dossier
     data = load_data()
     dossier = {
         "nom": nom,
@@ -347,12 +213,17 @@ def submit():
         "dernier_mail_non_conforme": "",
         "dernier_mail_conforme": ""
     }
+
+    print(f"[DEBUG] Dossier prêt à sauvegarde: {dossier}")
+
     data.append(dossier)
     save_data(data)
 
-    # n'envoyer la confirmation que si on a au moins un fichier
+    reloaded = load_data()
+    print(f"[DEBUG] Dernier dossier après sauvegarde: {reloaded[-1]}")
+
     send_accuse_reception(email, f"{prenom} {nom}")
-    print(f"[INFO] Dossier enregistre pour {prenom} {nom} ({len(fichiers)} fichiers)")
+    print(f"[INFO] Dossier enregistré pour {prenom} {nom} ({len(fichiers)} fichiers)")
 
     return redirect(url_for('confirmation'))
 
@@ -370,53 +241,9 @@ def admin():
                 fichiers_existants.append(fichier)
         dossier["fichiers"] = fichiers_existants
 
-    # Compteurs pour affichage
     file_count = len(os.listdir(UPLOAD_FOLDER))
     dossier_count = len(data)
-
     return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
-
-@app.route('/save_comment', methods=['POST'])
-def save_comment():
-    index = int(request.form['index'])
-    comment = request.form['commentaire']
-    data = load_data()
-    if 0 <= index < len(data):
-        data[index]["commentaire"] = comment
-        save_data(data)
-    return redirect(url_for('admin'))
-
-@app.route('/set_status', methods=['POST'])
-def set_status():
-    index = int(request.form['index'])
-    status = request.form['status']
-    data = load_data()
-    if 0 <= index < len(data):
-        data[index]["statut"] = status
-
-        if status == "non conforme":
-            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
-            commentaire = data[index].get("commentaire", "Aucun commentaire")
-            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index], data)
-            data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        elif status == "conforme":
-            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
-            send_conforme_email(data[index]["email"], nom_prenom, data[index], data)
-            data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        save_data(data)
-    return redirect(url_for('admin'))
-
-@app.route('/mail_preview/<int:index>/<status>')
-def mail_preview(index, status):
-    data = load_data()
-    if 0 <= index < len(data):
-        if status == "conforme":
-            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
-        elif status == "non_conforme":
-            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
-    return "Mail introuvable"
 
 @app.route('/delete', methods=['POST'])
 def delete():
@@ -429,13 +256,6 @@ def delete():
                 os.remove(os.path.join(UPLOAD_FOLDER, fichier))
             except Exception:
                 pass
-        prefix = f"{dossier['nom']}_{dossier['prenom']}_"
-        for f in os.listdir(UPLOAD_FOLDER):
-            if f.startswith(prefix):
-                try:
-                    os.remove(os.path.join(UPLOAD_FOLDER, f))
-                except Exception:
-                    pass
         data.pop(index)
         save_data(data)
     return redirect(url_for('admin'))
@@ -462,7 +282,7 @@ def uploaded_file(filename):
 
 @app.route('/reset', methods=['POST'])
 def reset():
-    save_data([])  # vider data.json
+    save_data([])
     for f in os.listdir(UPLOAD_FOLDER):
         try:
             os.remove(os.path.join(UPLOAD_FOLDER, f))
