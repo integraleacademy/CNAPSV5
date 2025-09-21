@@ -56,11 +56,6 @@ def convert_to_pdf(filepath, output_filename):
             except Exception:
                 pass
 
-        if ext == '.pdf':
-            if os.path.abspath(filepath) != os.path.abspath(pdf_path):
-                shutil.move(filepath, pdf_path)
-            return os.path.basename(pdf_path)
-
         if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
             if ext == '.heic' and not HEIC_OK:
                 return None
@@ -239,6 +234,13 @@ def submit():
                 orig_ext = os.path.splitext(file.filename)[1].lower()
                 temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
 
+                # ⚠️ Si c’est déjà un PDF → on le garde tel quel
+                if orig_ext == ".pdf":
+                    file.save(temp_path)
+                    paths.append(os.path.basename(temp_path))
+                    continue
+
+                # Sinon, on fait la conversion
                 if os.path.exists(temp_path):
                     try:
                         os.remove(temp_path)
@@ -295,7 +297,6 @@ def admin():
                 fichiers_existants.append(fichier)
         dossier["fichiers"] = fichiers_existants
 
-    # Compteurs pour affichage
     file_count = len(os.listdir(UPLOAD_FOLDER))
     dossier_count = len(data)
 
