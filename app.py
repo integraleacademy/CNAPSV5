@@ -241,14 +241,24 @@ def submit():
 
                 file.save(temp_path)
                 converted = convert_to_pdf(temp_path, base_filename)
+
                 if converted:
-                    final_path = os.path.join(UPLOAD_FOLDER, converted)
+                    # On nettoie et sécurise le nom final
+                    final_name = clean_filename(converted)
+                    final_path = os.path.join(UPLOAD_FOLDER, final_name)
+
+                    # Si le nom a changé, on renomme le fichier
+                    if converted != final_name:
+                        os.rename(os.path.join(UPLOAD_FOLDER, converted), final_path)
+
+                    paths.append(final_name)
+
+                    # On supprime l’original temporaire si ce n’est pas le même
                     if os.path.abspath(final_path) != os.path.abspath(temp_path):
                         try:
                             os.remove(temp_path)
                         except Exception:
                             pass
-                    paths.append(converted)
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
