@@ -44,7 +44,8 @@ def save_data(data):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 def clean_filename(text):
-    return text.strip().replace(" ", "_").replace("'", "").replace('"', '')
+    # ✅ normalisation en minuscules pour éviter les problèmes de casse
+    return text.strip().replace(" ", "_").replace("'", "").replace('"', '').lower()
 
 # -----------------------
 # Conversion fichiers
@@ -234,6 +235,7 @@ def confirmation():
 @app.route('/admin')
 def admin():
     data = load_data()
+    # ✅ plus de problème de casse, les noms de fichiers sont normalisés en minuscules
     for dossier in data:
         fichiers_existants = []
         for fichier in dossier.get("fichiers", []):
@@ -245,7 +247,6 @@ def admin():
     dossier_count = len(data)
     return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
 
-# ✅ route qui manquait !
 @app.route('/mail_preview/<int:index>/<status>')
 def mail_preview(index, status):
     data = load_data()
