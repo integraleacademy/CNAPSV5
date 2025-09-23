@@ -70,11 +70,16 @@ def convert_to_pdf(filepath, output_filename):
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
             return os.path.basename(pdf_path)
 
+        elif ext == '.pdf':
+            # Déjà en PDF, pas besoin de conversion
+            return os.path.basename(filepath)
+
         return None
 
     except Exception as e:
         print(f"[ERROR] Conversion échouée : {e}")
-        return None
+        # On garde le fichier original si conversion échoue
+        return os.path.basename(filepath)
 
 # -----------------------
 # Gestion des emails
@@ -222,7 +227,7 @@ def submit():
 
     fichiers = []
     id_files = request.files.getlist('id_files')
-    domicile_file = request.files.get('domicile_file')
+    domicile_files = request.files.getlist('domicile_file')
     identite_hebergeant_files = request.files.getlist('identite_hebergeant')
     attestation_hebergement_files = request.files.getlist('attestation_hebergement')
 
@@ -233,34 +238,26 @@ def submit():
                 base_filename = f"{nom}_{prenom}_{prefix}_{i}"
                 orig_ext = os.path.splitext(file.filename)[1].lower()
                 temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
-
-                # ⚠️ Si c’est déjà un PDF → on le garde tel quel
-                if orig_ext == ".pdf":
+                try:
                     file.save(temp_path)
-                    paths.append(os.path.basename(temp_path))
-                    continue
-
-                # Sinon, on fait la conversion
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                    except Exception:
-                        pass
-
-                file.save(temp_path)
-                converted = convert_to_pdf(temp_path, base_filename)
-                if converted:
-                    final_path = os.path.join(UPLOAD_FOLDER, converted)
-                    if os.path.abspath(final_path) != os.path.abspath(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except Exception:
-                            pass
-                    paths.append(converted)
+                    converted = convert_to_pdf(temp_path, base_filename)
+                    if converted:
+                        final_path = os.path.join(UPLOAD_FOLDER, converted)
+                        if os.path.abspath(final_path) != os.path.abspath(temp_path):
+                            try:
+                                os.remove(temp_path)
+                            except Exception:
+                                pass
+                        paths.append(converted)
+                    else:
+                        # Si conversion échoue, on garde le fichier brut
+                        paths.append(os.path.basename(temp_path))
+                except Exception as e:
+                    print(f"[ERROR] Sauvegarde échouée : {e}")
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
-    fichiers += save_files([domicile_file], "domicile", nom, prenom)
+    fichiers += save_files(domicile_files, "domicile", nom, prenom)
     fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
     fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
 
