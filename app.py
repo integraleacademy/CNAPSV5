@@ -166,26 +166,26 @@ def send_accuse_reception(user_email, user_name):
         "#27ae60",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
-        <p>Nous allons procéder à une vérification de vos documents et nous reviendrons vers vous rapidement.</p>
+        <p>📩 Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span> ✅</p>
+        <p>Nous allons à présent procéder à une 🔍 vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
         """
     )
     return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
 
 # --- Documents non conformes ---
 def send_non_conforme_email(user_email, user_name, comment, dossier, data):
-    contenu_txt = f"Bonjour {user_name},\n\nVos documents ne sont pas conformes.\nCommentaire : {comment}"
+    contenu_txt = f"Bonjour {user_name},\n\nVos documents ne sont pas conformes ❌\nCommentaire : {comment}"
     contenu_html = template_email(
         "❌ Documents CNAPS non conformes",
         "#c0392b",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>Après vérification par nos services, nous vous informons que vos documents transmis 
+        <p>❌ Après vérification par nos services, nous vous informons que vos documents transmis 
         <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
         <div style="background:#fff3cd; padding:15px; border-radius:8px; border:1px solid #ffeeba; margin:20px 0;">
-          ⚠️ Merci de bien vouloir fournir des documents conformes à la réglementation en vigueur.
+          ⚠️ Merci de bien vouloir fournir uniquement des documents conformes à la réglementation en vigueur.
         </div>
-        <p><strong>Détail des non conformités :</strong></p>
+        <p>📋 <strong>Détail des non conformités :</strong></p>
         <p style="font-style:italic; color:#555;">{comment}</p>
         """,
         bouton={
@@ -206,9 +206,11 @@ def send_conforme_email(user_email, user_name, dossier, data):
         "#27ae60",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>Après vérification, nous vous informons que vos documents sont 
+        <p>✅ Après vérification par nos services, nous vous informons que vos documents transmis sont 
         <span style="color:green; font-weight:bold;">conformes</span>.</p>
-        <p>Nous allons transmettre votre demande d'autorisation auprès du CNAPS - Ministère de l'intérieur.</p>
+        <p>📤 Nous avons transmis la demande d'autorisation auprès du CNAPS – Ministère de l'intérieur.</p>
+        <p>👮 Les services de l’État vont procéder à une enquête administrative (vérification des antécédents judiciaires).</p>
+        <p>📮 Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</p>
         """
     )
     dossier["dernier_mail_conforme"] = contenu_html
