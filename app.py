@@ -4,10 +4,13 @@ import json
 import smtplib
 import zipfile
 from email.message import EmailMessage
-from PIL import Image
+from PIL import Image, ImageFile
 import pypandoc
 import shutil
 from datetime import datetime
+
+# Activer la tolérance Pillow pour certains JPEG un peu "tronqués"
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # HEIC support
 try:
@@ -50,6 +53,10 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
+        # ✅ Cas spécial : si c’est déjà un PDF → on le garde tel quel
+        if ext == '.pdf':
+            return os.path.basename(filepath)
+
         if os.path.exists(pdf_path):
             try:
                 os.remove(pdf_path)
@@ -70,15 +77,11 @@ def convert_to_pdf(filepath, output_filename):
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
             return os.path.basename(pdf_path)
 
-        elif ext == '.pdf':
-            # Déjà en PDF, pas besoin de conversion
-            return os.path.basename(filepath)
-
         return None
 
     except Exception as e:
         print(f"[ERROR] Conversion échouée : {e}")
-        # On garde le fichier original si conversion échoue
+        # On garde le fichier original même si conversion rate
         return os.path.basename(filepath)
 
 # -----------------------
@@ -160,7 +163,7 @@ L’équipe Intégrale Academy
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#c0392b;">❌ Documents CNAPS non conformes CNAPS</h2>
+          <h2 style="color:#c0392b;">❌ Documents CNAPS non conformes</h2>
           <p>Bonjour <strong>{user_name}</strong>,</p>
           <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
           <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
@@ -250,7 +253,6 @@ def submit():
                                 pass
                         paths.append(converted)
                     else:
-                        # Si conversion échoue, on garde le fichier brut
                         paths.append(os.path.basename(temp_path))
                 except Exception as e:
                     print(f"[ERROR] Sauvegarde échouée : {e}")
