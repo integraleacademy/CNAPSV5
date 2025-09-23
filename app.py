@@ -53,9 +53,8 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
-        # ✅ Cas spécial : si c’est déjà un PDF → on le garde tel quel
+        # ✅ Si déjà un PDF → on le garde
         if ext == '.pdf':
-            print(f"[DEBUG] Pas de conversion (PDF déjà valide) : {filepath}")
             return os.path.basename(filepath)
 
         if os.path.exists(pdf_path):
@@ -72,24 +71,52 @@ def convert_to_pdf(filepath, output_filename):
                 image.seek(0)
             rgb_im = image.convert('RGB')
             rgb_im.save(pdf_path)
-            print(f"[DEBUG] Image convertie en PDF : {pdf_path}")
             return os.path.basename(pdf_path)
 
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
-            print(f"[DEBUG] Document converti en PDF : {pdf_path}")
             return os.path.basename(pdf_path)
 
         return None
 
     except Exception as e:
         print(f"[ERROR] Conversion échouée : {e}")
-        # On garde le fichier original même si conversion rate
         return os.path.basename(filepath)
 
 # -----------------------
-# Gestion des emails
+# Gestion des emails (Nouveau format)
 # -----------------------
+
+def template_email(titre, color, contenu_html, bouton=None):
+    logo_url = "https://cnapsv5-1.onrender.com/static/logo_integrale_academy.png"
+    bouton_html = ""
+    if bouton:
+        bouton_html = f"""
+        <div style="text-align:center; margin:30px 0;">
+          <a href="{bouton['url']}"
+             style="display:inline-block; background:{bouton['couleur']}; color:white; padding:14px 22px; 
+                    text-decoration:none; font-size:16px; font-weight:bold; border-radius:6px;">
+            {bouton['texte']}
+          </a>
+        </div>
+        """
+    return f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
+        <div style="max-width:600px; margin:auto; background:white; padding:25px; border-radius:10px; border:1px solid #ddd;">
+          <div style="text-align:center; margin-bottom:20px;">
+            <img src="{logo_url}" alt="Intégrale Academy" style="max-height:80px;">
+          </div>
+          <h2 style="color:{color}; text-align:center; margin-top:0;">{titre}</h2>
+          {contenu_html}
+          {bouton_html}
+          <p style="margin-top:30px; text-align:center; font-size:14px; color:#555;">
+            L’équipe <strong>Intégrale Academy</strong>
+          </p>
+        </div>
+      </body>
+    </html>
+    """
 
 def send_email(user_email, subject, contenu_txt, contenu_html):
     smtp_server = "smtp.gmail.com"
@@ -121,98 +148,59 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
         print(f"⚠️ Erreur lors de l'envoi du mail ({subject}) à {user_email} : {e}")
         return False
 
+# --- Confirmation de dépôt ---
 def send_accuse_reception(user_email, user_name):
-    contenu_txt = f"""Bonjour {user_name},
-
-Votre dossier a bien été transmis ✅
-Vous recevrez un retour de l’équipe Intégrale Academy après vérification.
-
-Merci pour votre confiance,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Confirmation de dépôt CNAPS</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
-          <p>Nous allons à présent procéder à une vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
-        </div>
-      </body>
-    </html>
-    """
-
+    contenu_txt = f"Bonjour {user_name},\n\nVotre dossier a bien été transmis ✅"
+    contenu_html = template_email(
+        "✅ Confirmation de dépôt CNAPS",
+        "#27ae60",
+        f"""
+        <p>Bonjour <strong>{user_name}</strong>,</p>
+        <p>Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span>.</p>
+        <p>Nous allons procéder à une vérification de vos documents et nous reviendrons vers vous rapidement.</p>
+        """
+    )
     return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
 
+# --- Documents non conformes ---
 def send_non_conforme_email(user_email, user_name, comment, dossier, data):
-    contenu_txt = f"""Bonjour {user_name},
-
-Après vérification, vos documents transmis ne sont pas conformes.
-Merci de refaire la procédure en suivant le lien ci-dessous :
-{url_for('index', _external=True)}
-
-⚠️ Il est très important de fournir uniquement les documents demandés.
-
-Commentaire : {comment}
-
-Cordialement,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#c0392b;">❌ Documents CNAPS non conformes</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
-          <p style="background:#fff3cd; padding:10px; border-radius:5px; border:1px solid #ffeeba;">
-            ⚠️ <strong>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.</strong>
-          </p>
-          <p><b>Détail des non conformités :</b><br/><em>{comment}</em></p>
-          <div style="text-align:center; margin:20px 0;">
-            <a href="{url_for('index', _external=True)}"
-               style="background:#27ae60; color:white; padding:12px 20px; text-decoration:none; font-size:16px; border-radius:5px;">
-               🔄Veuillez déposer une nouvelle demande en cliquant ici
-            </a>
-          </div>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
+    contenu_txt = f"Bonjour {user_name},\n\nVos documents ne sont pas conformes.\nCommentaire : {comment}"
+    contenu_html = template_email(
+        "❌ Documents CNAPS non conformes",
+        "#c0392b",
+        f"""
+        <p>Bonjour <strong>{user_name}</strong>,</p>
+        <p>Après vérification par nos services, nous vous informons que vos documents transmis 
+        <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+        <div style="background:#fff3cd; padding:15px; border-radius:8px; border:1px solid #ffeeba; margin:20px 0;">
+          ⚠️ Merci de bien vouloir fournir des documents conformes à la réglementation en vigueur.
         </div>
-      </body>
-    </html>
-    """
-
+        <p><strong>Détail des non conformités :</strong></p>
+        <p style="font-style:italic; color:#555;">{comment}</p>
+        """,
+        bouton={
+            "url": url_for('index', _external=True),
+            "texte": "🔄 Déposer une nouvelle demande",
+            "couleur": "#27ae60"
+        }
+    )
     dossier["dernier_mail_non_conforme"] = contenu_html
     save_data(data)
     send_email(user_email, "Documents non conformes - Intégrale Academy", contenu_txt, contenu_html)
 
+# --- Documents conformes ---
 def send_conforme_email(user_email, user_name, dossier, data):
-    contenu_txt = f"""Bonjour {user_name},
-
-Vos documents transmis sont conformes ✅
-Nous allons procéder à la demande d'autorisation préalable auprès du CNAPS.
-
-Merci pour votre confiance,
-L’équipe Intégrale Academy
-"""
-
-    contenu_html = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; border:1px solid #ddd;">
-          <h2 style="color:#27ae60;">✅ Documents CNAPS conformes</h2>
-          <p>Bonjour <strong>{user_name}</strong>,</p>
-          <p>Nous revenons vers vous concernant la demande d'autorisation préalable CNAPS - Ministère de l'intérieur. Après vérification par nos services, nous vous informons que les documents transmis sont <span style="color:green; font-weight:bold;">conformes</span>.</p>
-          <p>Nous avons transmis la demande d'autorisation auprès du CNAPS - Ministère de l'intérieur. Les services de l'Etat vont procéder à une enquête administrative (vérification des antécédents judiciaires). <strong> Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</strong></p>
-          <p>L’équipe <strong>Intégrale Academy</strong></p>
-        </div>
-      </body>
-    </html>
-    """
-
+    contenu_txt = f"Bonjour {user_name},\n\nVos documents sont conformes ✅"
+    contenu_html = template_email(
+        "✅ Documents CNAPS conformes",
+        "#27ae60",
+        f"""
+        <p>Bonjour <strong>{user_name}</strong>,</p>
+        <p>Après vérification, nous vous informons que vos documents sont 
+        <span style="color:green; font-weight:bold;">conformes</span>.</p>
+        <p>Nous allons transmettre votre demande d'autorisation auprès du CNAPS - Ministère de l'intérieur.</p>
+        """
+    )
     dossier["dernier_mail_conforme"] = contenu_html
     save_data(data)
     send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
@@ -244,28 +232,21 @@ def submit():
                 base_filename = f"{nom}_{prenom}_{prefix}_{i}"
                 orig_ext = os.path.splitext(file.filename)[1].lower()
                 temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
-
                 try:
                     file.save(temp_path)
-                    print(f"[DEBUG] Fichier reçu : {file.filename} (ext: {orig_ext}) → sauvegardé sous {temp_path}")
-
                     converted = convert_to_pdf(temp_path, base_filename)
                     if converted:
-                        print(f"[DEBUG] → Ajouté à la liste comme : {converted}")
                         final_path = os.path.join(UPLOAD_FOLDER, converted)
                         if os.path.abspath(final_path) != os.path.abspath(temp_path):
                             try:
                                 os.remove(temp_path)
-                                print(f"[DEBUG] → Ancien fichier supprimé : {temp_path}")
-                            except Exception as e:
-                                print(f"[DEBUG] ⚠️ Impossible de supprimer {temp_path} : {e}")
+                            except Exception:
+                                pass
                         paths.append(converted)
                     else:
-                        print(f"[DEBUG] → Conversion échouée, on garde le brut : {os.path.basename(temp_path)}")
                         paths.append(os.path.basename(temp_path))
-
                 except Exception as e:
-                    print(f"[ERROR] Sauvegarde échouée pour {file.filename} : {e}")
+                    print(f"[ERROR] Sauvegarde échouée : {e}")
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
