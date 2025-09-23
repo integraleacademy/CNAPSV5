@@ -9,7 +9,7 @@ import pypandoc
 import shutil
 from datetime import datetime
 
-# Activer la tolérance Pillow pour certains JPEG un peu "tronqués"
+# Activer la tolérance Pillow pour les JPEG tronqués
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # HEIC support
@@ -55,6 +55,7 @@ def convert_to_pdf(filepath, output_filename):
     try:
         # ✅ Cas spécial : si c’est déjà un PDF → on le garde tel quel
         if ext == '.pdf':
+            print(f"[DEBUG] Pas de conversion (PDF déjà valide) : {filepath}")
             return os.path.basename(filepath)
 
         if os.path.exists(pdf_path):
@@ -71,10 +72,12 @@ def convert_to_pdf(filepath, output_filename):
                 image.seek(0)
             rgb_im = image.convert('RGB')
             rgb_im.save(pdf_path)
+            print(f"[DEBUG] Image convertie en PDF : {pdf_path}")
             return os.path.basename(pdf_path)
 
         elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
             pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
+            print(f"[DEBUG] Document converti en PDF : {pdf_path}")
             return os.path.basename(pdf_path)
 
         return None
@@ -241,21 +244,28 @@ def submit():
                 base_filename = f"{nom}_{prenom}_{prefix}_{i}"
                 orig_ext = os.path.splitext(file.filename)[1].lower()
                 temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
+
                 try:
                     file.save(temp_path)
+                    print(f"[DEBUG] Fichier reçu : {file.filename} (ext: {orig_ext}) → sauvegardé sous {temp_path}")
+
                     converted = convert_to_pdf(temp_path, base_filename)
                     if converted:
+                        print(f"[DEBUG] → Ajouté à la liste comme : {converted}")
                         final_path = os.path.join(UPLOAD_FOLDER, converted)
                         if os.path.abspath(final_path) != os.path.abspath(temp_path):
                             try:
                                 os.remove(temp_path)
-                            except Exception:
-                                pass
+                                print(f"[DEBUG] → Ancien fichier supprimé : {temp_path}")
+                            except Exception as e:
+                                print(f"[DEBUG] ⚠️ Impossible de supprimer {temp_path} : {e}")
                         paths.append(converted)
                     else:
+                        print(f"[DEBUG] → Conversion échouée, on garde le brut : {os.path.basename(temp_path)}")
                         paths.append(os.path.basename(temp_path))
+
                 except Exception as e:
-                    print(f"[ERROR] Sauvegarde échouée : {e}")
+                    print(f"[ERROR] Sauvegarde échouée pour {file.filename} : {e}")
         return paths
 
     fichiers += save_files(id_files, "id", nom, prenom)
