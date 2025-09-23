@@ -166,7 +166,7 @@ def send_accuse_reception(user_email, user_name):
         "#27ae60",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>📩 Votre dossier CNAPS a bien été <span style="color:green; font-weight:bold;">transmis</span> ✅</p>
+        <p>📩 Votre dossier a bien été <span style="color:green; font-weight:bold;">transmis</span> ✅</p>
         <p>Nous allons à présent procéder à une 🔍 vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
         """
     )
@@ -180,13 +180,15 @@ def send_non_conforme_email(user_email, user_name, comment, dossier, data):
         "#c0392b",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>❌ Après vérification par nos services, nous vous informons que les documents transmis 
+        <p>❌ Après vérification par nos services, nous vous informons que vos documents transmis 
         <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
+        
         <div style="background:#fff3cd; padding:15px; border-radius:8px; border:1px solid #ffeeba; margin:20px 0;">
-          ⚠️ Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.
+          ⚠️ <strong>Détail des non conformités :</strong><br><br>
+          <em>{comment}</em>
         </div>
-        <p>📋 <strong>Détail des non conformités :</strong></p>
-        <p style="font-style:italic; color:#555;">{comment}</p>
+
+        <p>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.</p>
         """,
         bouton={
             "url": url_for('index', _external=True),
@@ -206,7 +208,7 @@ def send_conforme_email(user_email, user_name, dossier, data):
         "#27ae60",
         f"""
         <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>✅ Après vérification par nos services, nous vous informons que les documents transmis sont 
+        <p>✅ Après vérification par nos services, nous vous informons que vos documents transmis sont 
         <span style="color:green; font-weight:bold;">conformes</span>.</p>
         <p>📤 Nous avons transmis la demande d'autorisation auprès du CNAPS – Ministère de l'intérieur.</p>
         <p>👮 Les services de l’État vont procéder à une enquête administrative (vérification des antécédents judiciaires).</p>
