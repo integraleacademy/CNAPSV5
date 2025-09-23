@@ -22,7 +22,7 @@ except Exception as e:
     HEIC_OK = False
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # nécessaire pour flash()
+app.secret_key = "supersecretkey"
 UPLOAD_FOLDER = '/mnt/data/uploads'
 DATA_FILE = '/mnt/data/data.json'
 
@@ -53,7 +53,6 @@ def convert_to_pdf(filepath, output_filename):
     pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
 
     try:
-        # ✅ Si déjà un PDF → on le garde
         if ext == '.pdf':
             return os.path.basename(filepath)
 
@@ -84,7 +83,7 @@ def convert_to_pdf(filepath, output_filename):
         return os.path.basename(filepath)
 
 # -----------------------
-# Gestion des emails (Nouveau format)
+# Gestion des emails (style harmonisé)
 # -----------------------
 
 def template_email(titre, color, contenu_html, bouton=None):
@@ -104,14 +103,25 @@ def template_email(titre, color, contenu_html, bouton=None):
     <html>
       <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
         <div style="max-width:600px; margin:auto; background:white; padding:25px; border-radius:10px; border:1px solid #ddd;">
+          
+          <!-- Logo + Nom -->
           <div style="text-align:center; margin-bottom:20px;">
-            <img src="{logo_url}" alt="Intégrale Academy" style="max-height:80px;">
+            <img src="{logo_url}" alt="Intégrale Academy" style="max-height:80px; width:auto; display:block; margin:auto;">
+            <div style="font-size:18px; font-weight:bold; margin-top:8px;">Intégrale Academy</div>
           </div>
+
+          <!-- Titre -->
           <h2 style="color:{color}; text-align:center; margin-top:0;">{titre}</h2>
+
+          <!-- Contenu -->
           {contenu_html}
+
+          <!-- Bouton -->
           {bouton_html}
+
+          <!-- Signature -->
           <p style="margin-top:30px; text-align:center; font-size:14px; color:#555;">
-            L’équipe <strong>Intégrale Academy</strong>
+            Cordialement,<br>L’équipe <strong>Intégrale Academy</strong>
           </p>
         </div>
       </body>
