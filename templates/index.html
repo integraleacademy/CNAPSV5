@@ -30,7 +30,7 @@
             align-items: flex-start;
             gap: 10px;
             margin: 10px 0;
-            font-size: 16px !important;   /* ✅ taille fixe identique partout */
+            font-size: 16px !important;
             font-weight: normal !important;
             line-height: 1.5;
             color: #000;
@@ -75,13 +75,13 @@
         
         <label>1 - Carte d'identité RECTO ET VERSO / Passeport / Titre de séjour :</label>
         <div id="id-files-container">
-            <input multiple name="id_files" required type="file"/>
+            <input multiple name="id_files" required type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
             <button id="add-id-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
         </div>
 
         <label>2 - Justificatif de domicile DE MOINS DE 3 MOIS :</label>
         <strong>ATTENTION : Bien vérifier que le justificatif de domicile a moins de 3 mois. Uniquement facture de gaz, d'électricité, d'eau ou quittance de loyer (PAS de facture de téléphone)</strong>
-        <input name="domicile_file" required type="file"/>
+        <input name="domicile_file" required type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
 
         <label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">
             3 - Si vous êtes hébergé(e), cochez la case 
@@ -90,11 +90,11 @@
         <div id="heberge_section" style="display: none;">
             <label>Pièce d'identité de l'hébergeant - ATTENTION : RECTO ET VERSO :</label>
             <div id="hebergeant-files-container">
-                <input name="identite_hebergeant" type="file"/>
+                <input name="identite_hebergeant" type="file" accept=".pdf,.jpg,.jpeg,.png"/>
                 <button id="add-hebergeant-file" style="margin-top: 10px; display: block;" type="button">+ Ajouter un autre fichier</button>
             </div>
-            <label>Attestation d'hébergement SIGNEE en utilisant ce modèle https://www.service-public.fr/simulateur/calcul/AttestationHebergement :</label>
-            <input name="attestation_hebergement" type="file"/>
+            <label>Attestation d'hébergement SIGNEE :</label>
+            <input name="attestation_hebergement" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
         </div>
 
         <!-- Nouvelle section Contrôle de conformité -->
@@ -112,6 +112,33 @@
     </form>
 </div>
 
+<!-- ✅ Validation fichiers vides -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.querySelector("form");
+
+  form.addEventListener("submit", function (e) {
+    let invalid = false;
+    const fileInputs = form.querySelectorAll('input[type="file"]');
+
+    fileInputs.forEach(input => {
+      for (let i = 0; i < input.files.length; i++) {
+        const f = input.files[i];
+        if (!f || f.size === 0) {
+          invalid = true;
+        }
+      }
+    });
+
+    if (invalid) {
+      e.preventDefault();
+      alert("⚠️ Le fichier choisi est vide ou inaccessible.\n\nMerci de vérifier que :\n- Le fichier est bien enregistré sur votre appareil\n- Vous ne l’envoyez pas directement depuis WhatsApp, Drive ou iCloud\n- Vous sélectionnez un vrai fichier local (PDF, JPG, PNG...).");
+    }
+  });
+});
+</script>
+
+<!-- ✅ Bouton + fichier identité -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const addButton = document.getElementById("add-id-file");
@@ -121,11 +148,13 @@ document.addEventListener("DOMContentLoaded", function () {
     newInput.type = "file";
     newInput.name = "id_files";
     newInput.required = true;
+    newInput.accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt";
     container.insertBefore(newInput, addButton);
   });
 });
 </script>
 
+<!-- ✅ Bouton + fichier hébergeant -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const addHebergeant = document.getElementById("add-hebergeant-file");
@@ -134,6 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const newInput = document.createElement("input");
     newInput.type = "file";
     newInput.name = "identite_hebergeant";
+    newInput.accept = ".pdf,.jpg,.jpeg,.png";
     containerHebergeant.insertBefore(newInput, addHebergeant);
   });
 });
