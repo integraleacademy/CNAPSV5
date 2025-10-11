@@ -428,22 +428,33 @@ def check_cnaps():
 
 
 # -----------------------
-# Route publique pour exposer data.json
+# ✅ Nouvelle route publique pour exposer data.json + compter les demandes
 # -----------------------
 @app.route("/data.json")
 def data_json():
-    """Renvoie le contenu du fichier data.json pour la plateforme CNAPS (CORS activé)"""
+    """Renvoie le nombre total de dossiers CNAPS déposés (peu importe le statut)"""
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            contenu = f.read()
-        # Autorise toutes les origines à lire ce fichier
+        if not os.path.exists(DATA_FILE):
+            result = {"count": 0, "demandes": []}
+        else:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # Compatibilité : liste ou dictionnaire
+            demandes = data if isinstance(data, list) else data.get("demandes", [])
+            result = {
+                "count": len(demandes),
+                "demandes": demandes
+            }
+
         headers = {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*"
         }
-        return contenu, 200, headers
+        return json.dumps(result, ensure_ascii=False), 200, headers
+
     except Exception as e:
         print("Erreur lecture data.json:", e)
-        return {"error": "impossible de lire les données"}, 500
-
+        return json.dumps({"count": -1, "error": str(e)}), 500, {
+            "Access-Control-Allow-Origin": "*"
+        }
 
