@@ -4,3 +4,4 @@ gunicorn
 pillow
 pypandoc
 pillow-heif
+requests
