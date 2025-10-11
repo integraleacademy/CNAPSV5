@@ -408,21 +408,24 @@ def reset():
 def check_cnaps():
     """Vérifie automatiquement le nombre de demandes CNAPS non traitées"""
     try:
-        # 🔗 URL de la plateforme CNAPS (doit pointer vers le fichier JSON public)
         CNAPS_URL = "https://cnapsv5-1.onrender.com/data.json"
-
         r = requests.get(CNAPS_URL, timeout=5)
         if r.status_code == 200:
             data = r.json()
-            demandes = data.get("demandes", [])
-            # On compte celles qui ne sont pas encore traitées
-            non_traitees = [d for d in demandes if not d.get("traite")]
-            return {"count": len(non_traitees)}
+            # Si c’est une liste (comme chez toi)
+            if isinstance(data, list):
+                non_traitees = [d for d in data if not d.get("statut")]
+                return {"count": len(non_traitees)}
+            # Si c’est un dict (autre format)
+            elif isinstance(data, dict):
+                demandes = data.get("demandes", [])
+                non_traitees = [d for d in demandes if not d.get("statut")]
+                return {"count": len(non_traitees)}
     except Exception as e:
         print("⚠️ Erreur récupération CNAPS:", e)
 
-    # En cas d’erreur, on renvoie -1 pour indiquer un souci
     return {"count": -1}
+
 
 # -----------------------
 # Route publique pour exposer data.json
