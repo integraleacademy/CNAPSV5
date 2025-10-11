@@ -424,11 +424,16 @@ def check_cnaps():
     # En cas d’erreur, on renvoie -1 pour indiquer un souci
     return {"count": -1}
 
-    @app.route("/data.json")
+# -----------------------
+# Route publique pour exposer data.json
+# -----------------------
+@app.route("/data.json")
 def data_json():
+    """Renvoie le contenu du fichier data.json pour la plateforme CNAPS"""
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return f.read(), 200, {"Content-Type": "application/json"}
+            contenu = f.read()
+        return contenu, 200, {"Content-Type": "application/json"}
     except Exception as e:
         print("Erreur lecture data.json:", e)
         return {"error": "impossible de lire les données"}, 500
