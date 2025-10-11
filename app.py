@@ -3,6 +3,7 @@ import os
 import json
 import smtplib
 import zipfile
+import requests
 from email.message import EmailMessage
 from PIL import Image, ImageFile
 import pypandoc
@@ -400,3 +401,25 @@ def reset():
             pass
     flash("✅ Base et fichiers vidés avec succès.")
     return redirect(url_for('admin'))
+
+
+# ✅ Nouvelle route pour vérifier automatiquement les dépôts CNAPS
+@app.route("/check_cnaps")
+def check_cnaps():
+    """Vérifie automatiquement le nombre de demandes CNAPS non traitées"""
+    try:
+        # 🔗 URL de la plateforme CNAPS (doit pointer vers le fichier JSON public)
+        CNAPS_URL = "https://cnapsv5-1.onrender.com/data.json"
+
+        r = requests.get(CNAPS_URL, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            demandes = data.get("demandes", [])
+            # On compte celles qui ne sont pas encore traitées
+            non_traitees = [d for d in demandes if not d.get("traite")]
+            return {"count": len(non_traitees)}
+    except Exception as e:
+        print("⚠️ Erreur récupération CNAPS:", e)
+
+    # En cas d’erreur, on renvoie -1 pour indiquer un souci
+    return {"count": -1}
