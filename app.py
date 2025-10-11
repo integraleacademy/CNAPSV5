@@ -432,12 +432,18 @@ def check_cnaps():
 # -----------------------
 @app.route("/data.json")
 def data_json():
-    """Renvoie le contenu du fichier data.json pour la plateforme CNAPS"""
+    """Renvoie le contenu du fichier data.json pour la plateforme CNAPS (CORS activé)"""
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             contenu = f.read()
-        return contenu, 200, {"Content-Type": "application/json"}
+        # Autorise toutes les origines à lire ce fichier
+        headers = {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        }
+        return contenu, 200, headers
     except Exception as e:
         print("Erreur lecture data.json:", e)
         return {"error": "impossible de lire les données"}, 500
+
 
