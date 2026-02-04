@@ -47,6 +47,17 @@
             section.style.display = document.getElementById("heberge").checked ? "block" : "none";
         }
 
+        function toggleNonFrancais() {
+            var section = document.getElementById("non_francais_section");
+            var casierInput = document.getElementById("non_francais_casier");
+            var diplomeInput = document.getElementById("non_francais_diplome");
+            var checked = document.getElementById("non_francais").checked;
+
+            section.style.display = checked ? "block" : "none";
+            casierInput.required = checked;
+            diplomeInput.required = checked;
+        }
+
         window.addEventListener("DOMContentLoaded", () => {
             const form = document.querySelector("form");
             form.addEventListener("submit", function (e) {
@@ -95,6 +106,17 @@
             </div>
             <label>Attestation d'hébergement SIGNEE :</label>
             <input name="attestation_hebergement" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
+        </div>
+
+        <label style="margin-top: 20px; font-weight: bold; font-size: 1.1em;">
+            4 - Si vous n'avez pas la nationalité française, cochez la case
+            <input id="non_francais" onchange="toggleNonFrancais()" type="checkbox"/>
+        </label>
+        <div id="non_francais_section" style="display: none;">
+            <label>Casier judiciaire de moins de 3 mois du PAYS DE NAISSANCE traduit en français par un traducteur assermenté :</label>
+            <input id="non_francais_casier" name="non_francais_casier" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
+            <label>Diplôme français supérieur au bac ou Attestation de réussite au test TCF (niveau B1 minimum) :</label>
+            <input id="non_francais_diplome" name="non_francais_diplome" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.rtf,.odt"/>
         </div>
 
         <!-- Nouvelle section Contrôle de conformité -->

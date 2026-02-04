@@ -239,6 +239,8 @@ def submit():
     domicile_files = request.files.getlist('domicile_file')
     identite_hebergeant_files = request.files.getlist('identite_hebergeant')
     attestation_hebergement_files = request.files.getlist('attestation_hebergement')
+    non_francais_casier_files = request.files.getlist('non_francais_casier')
+    non_francais_diplome_files = request.files.getlist('non_francais_diplome')
 
     def save_files(files, prefix, nom, prenom):
         paths = []
@@ -268,6 +270,8 @@ def submit():
     fichiers += save_files(domicile_files, "domicile", nom, prenom)
     fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
     fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
+    fichiers += save_files(non_francais_casier_files, "casier_non_francais", nom, prenom)
+    fichiers += save_files(non_francais_diplome_files, "diplome_non_francais", nom, prenom)
 
     data = load_data()
     dossier = {
@@ -457,4 +461,3 @@ def data_json():
         return json.dumps({"count": -1, "error": str(e)}), 500, {
             "Access-Control-Allow-Origin": "*"
         }
-
