@@ -3,45 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Préinscription CNAPS</title>
+  <meta http-equiv="refresh" content="10;url={{ public_form_url }}" />
+  <title>Nouveau formulaire CNAPS</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f5fff5; margin:0; }
-    .card { max-width:700px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 0 15px rgba(0,0,0,.08); padding:24px; }
-    label { display:block; margin:12px 0 6px; font-weight:600; }
-    input, select { width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box; }
-    button { margin-top:20px; background:#198754; color:#fff; border:0; padding:12px 16px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    :root {
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0b2f4f, #198754);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .modal {
+      width: min(560px, 100%);
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+      padding: 28px;
+      text-align: center;
+    }
+    .logo {
+      height: 95px;
+      max-width: 100%;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 1.6rem;
+      color: #0b2f4f;
+    }
+    p {
+      margin: 8px 0;
+      color: #374151;
+      line-height: 1.5;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 18px;
+      background: #198754;
+      color: #fff;
+      font-weight: bold;
+      text-decoration: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+    }
+    .small {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #6b7280;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <img alt="Logo Intégrale Academy" src="/static/logo_integrale_academy.png" style="height:120px; display:block; margin:0 auto 10px;"/>
-    <h2 style="text-align:center;">Formulaire de préinscription CNAPS</h2>
-
-    <form action="/submit" method="POST">
-      <label for="nom">Nom</label>
-      <input id="nom" name="nom" type="text" required>
-
-      <label for="prenom">Prénom</label>
-      <input id="prenom" name="prenom" type="text" required>
-
-      <label for="formation">Formation souhaitée</label>
-      <select id="formation" name="formation" required>
-        <option value="">-- Sélectionnez une formation --</option>
-        <option value="APS">APS</option>
-        <option value="A3P">A3P</option>
-      </select>
-
-      <label for="session">Choix des dates de formation</label>
-      <input id="session" name="session" type="text" placeholder="Ex : du 10/03/2026 au 25/04/2026" required>
-
-      <label for="telephone">Téléphone</label>
-      <input id="telephone" name="telephone" type="tel" required>
-
-      <label for="email">Mail</label>
-      <input id="email" name="email" type="email" required>
-
-      <button type="submit">Envoyer ma préinscription</button>
-    </form>
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-describedby="modal-description">
+    <img alt="Logo Intégrale Academy" class="logo" src="/static/logo_integrale_academy.png" />
+    <h1 id="modal-title">Le formulaire a changé d’adresse</h1>
+    <p id="modal-description">Pour continuer votre préinscription CNAPS, veuillez utiliser le nouveau site.</p>
+    <a class="cta" href="{{ public_form_url }}">Accéder au nouveau formulaire</a>
+    <p class="small">Redirection automatique dans 10 secondes :<br><strong>{{ public_form_url }}</strong></p>
   </div>
 </body>
 </html>
