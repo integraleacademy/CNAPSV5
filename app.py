@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
 import os
 import json
 import smtplib
@@ -233,7 +233,11 @@ def get_mail_content(stagiaire, cnaps_link):
 
 @app.route('/')
 def index():
-    return render_template('index.html', public_form_url=PUBLIC_FORM_URL)
+    response = make_response(render_template('index.html', public_form_url=PUBLIC_FORM_URL))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/submit', methods=['POST'])
