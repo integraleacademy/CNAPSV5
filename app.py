@@ -8,10 +8,35 @@ from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-UPLOAD_FOLDER = '/mnt/data/uploads'
-DATA_FILE = '/mnt/data/data.json'
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def _resolve_storage_paths():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    configured_data_file = os.environ.get("DATA_FILE")
+    configured_upload_folder = os.environ.get("UPLOAD_FOLDER")
+
+    if configured_data_file and configured_upload_folder:
+        data_file = configured_data_file
+        upload_folder = configured_upload_folder
+    elif os.path.isdir("/mnt/data") and os.access("/mnt/data", os.W_OK):
+        data_file = "/mnt/data/data.json"
+        upload_folder = "/mnt/data/uploads"
+    else:
+        storage_root = os.path.join(base_dir, "storage")
+        data_file = os.path.join(storage_root, "data.json")
+        upload_folder = os.path.join(storage_root, "uploads")
+
+    os.makedirs(os.path.dirname(data_file), exist_ok=True)
+    os.makedirs(upload_folder, exist_ok=True)
+
+    if not os.path.exists(data_file):
+        with open(data_file, "w", encoding="utf-8") as f:
+            json.dump([], f)
+
+    return upload_folder, data_file
+
+
+UPLOAD_FOLDER, DATA_FILE = _resolve_storage_paths()
 
 FORMATIONS = {
     "APS": {
