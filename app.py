@@ -2,12 +2,18 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import os
 import json
 import smtplib
+import logging
 from datetime import datetime
 from email.message import EmailMessage
 from PIL import Image, ImageDraw, ImageFont
+import requests
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+PUBLIC_FORM_URL = "https://cnapsv3.onrender.com/public-form"
+
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
 
 
 def get_storage_paths():
@@ -132,14 +138,15 @@ def generate_justificatif_pdf(stagiaire):
 
 
 def send_email_with_attachment(user_email, subject, contenu_txt, contenu_html, attachment_path):
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     smtp_user = os.environ.get("EMAIL_USER")
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
     if not smtp_user or not smtp_password:
-        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis")
-        return False
+        message = "EMAIL_USER ou EMAIL_PASSWORD non définis"
+        logger.warning(message)
+        return False, message
 
     try:
         msg = EmailMessage()
@@ -157,15 +164,46 @@ def send_email_with_attachment(user_email, subject, contenu_txt, contenu_html, a
                 filename=os.path.basename(attachment_path)
             )
 
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as server:
+            server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
 
-        return True
+        return True, "Email envoyé"
     except Exception as e:
-        print(f"⚠️ Erreur envoi mail : {e}")
-        return False
+        logger.exception("Erreur envoi mail vers %s", user_email)
+        return False, str(e)
+
+
+def send_sms_notification(stagiaire):
+    sms_webhook_url = os.environ.get("SMS_WEBHOOK_URL")
+    if not sms_webhook_url:
+        message = "SMS_WEBHOOK_URL non défini"
+        logger.warning(message)
+        return False, message
+
+    payload = {
+        "phone": stagiaire["telephone"],
+        "name": f"{stagiaire['prenom']} {stagiaire['nom']}",
+        "formation": stagiaire["formation"],
+        "session": stagiaire["session"],
+    }
+
+    headers = {"Content-Type": "application/json"}
+    sms_api_key = os.environ.get("SMS_API_KEY")
+    if sms_api_key:
+        headers["Authorization"] = f"Bearer {sms_api_key}"
+
+    try:
+        response = requests.post(sms_webhook_url, json=payload, headers=headers, timeout=20)
+        if response.ok:
+            return True, "SMS envoyé"
+        return False, f"HTTP {response.status_code}: {response.text[:200]}"
+    except requests.RequestException as e:
+        logger.exception("Erreur envoi SMS vers %s", stagiaire["telephone"])
+        return False, str(e)
 
 
 def get_mail_content(stagiaire, cnaps_link):
@@ -195,7 +233,7 @@ def get_mail_content(stagiaire, cnaps_link):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect(PUBLIC_FORM_URL)
 
 
 @app.route('/submit', methods=['POST'])
@@ -222,6 +260,10 @@ def submit():
         "date_preinscription": datetime.now().strftime("%d/%m/%Y %H:%M"),
         "cnaps_depose": False,
         "cnaps_depose_date": "",
+        "email_sent": False,
+        "email_error": "",
+        "sms_sent": False,
+        "sms_error": "",
     }
 
     data.append(dossier)
@@ -231,7 +273,23 @@ def submit():
     justificatif_path = generate_justificatif_pdf(dossier)
     cnaps_link = url_for('cnaps_submitted', index=index_dossier, _external=True)
     subject, txt, html = get_mail_content(dossier, cnaps_link)
-    send_email_with_attachment(email, subject, txt, html, justificatif_path)
+    email_sent, email_error = send_email_with_attachment(email, subject, txt, html, justificatif_path)
+    sms_sent, sms_error = send_sms_notification(dossier)
+
+    data[index_dossier]["email_sent"] = email_sent
+    data[index_dossier]["email_error"] = email_error
+    data[index_dossier]["sms_sent"] = sms_sent
+    data[index_dossier]["sms_error"] = sms_error
+    save_data(data)
+
+    if not email_sent or not sms_sent:
+        logger.warning(
+            "Notifications incomplètes pour %s %s (email=%s, sms=%s)",
+            prenom,
+            nom,
+            email_error,
+            sms_error,
+        )
 
     return redirect(url_for('confirmation'))
 
