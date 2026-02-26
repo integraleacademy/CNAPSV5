@@ -1,26 +1,10 @@
-from flask import Flask, render_template, request, redirect, send_file, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash
 import os
 import json
 import smtplib
-import zipfile
-import requests
-from email.message import EmailMessage
-from PIL import Image, ImageFile
-import pypandoc
-import shutil
 from datetime import datetime
-
-# Activer la tolérance Pillow pour les JPEG tronqués
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-# HEIC support
-try:
-    import pillow_heif
-    pillow_heif.register_heif_opener()
-    HEIC_OK = True
-except Exception as e:
-    print(f"[WARNING] HEIC non activé: {e}")
-    HEIC_OK = False
+from email.message import EmailMessage
+from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -29,9 +13,19 @@ DATA_FILE = '/mnt/data/data.json'
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# -----------------------
-# Fonctions utilitaires
-# -----------------------
+FORMATIONS = {
+    "APS": {
+        "label": "AGENT DE PREVENTION ET DE SECURITE (APS)",
+        "rncp": "34054",
+        "nature": "Titre à Finalité Professionnelle (TFP) Agent de Prévention et de Sécurité - Agrément de la CPNEFP n°8320032701 en date du 23/06/2025 (valable jusqu'au 23/06/2028)",
+    },
+    "A3P": {
+        "label": "AGENT DE PROTECTION PHYSIQUE DES PERSONNES (A3P)",
+        "rncp": "35098",
+        "nature": "Titre à Finalité Professionnelle (TFP) Agent de Protection Physique des Personnes - Agrément de la CPNEFP n°8320111201 en date du 27/06/2025 (valable jusqu'au 27/06/2028)",
+    }
+}
+
 
 def load_data():
     if os.path.exists(DATA_FILE):
@@ -42,101 +36,91 @@ def load_data():
             return []
     return []
 
+
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-def clean_filename(text):
-    return text.strip().replace(" ", "_").replace("'", "").replace('"', '')
 
-def convert_to_pdf(filepath, output_filename):
-    ext = os.path.splitext(filepath)[1].lower()
-    pdf_path = os.path.join(UPLOAD_FOLDER, f"{output_filename}.pdf")
+def clean_value(text):
+    return (text or "").strip()
 
+
+def generate_justificatif_pdf(stagiaire):
+    safe_nom = stagiaire['nom'].replace(' ', '_')
+    safe_prenom = stagiaire['prenom'].replace(' ', '_')
+    filename = f"justificatif_preinscription_{safe_nom}_{safe_prenom}_{stagiaire['formation'].lower()}.pdf"
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+
+    formation = FORMATIONS[stagiaire['formation']]
+    lines = [
+        "ANNEXE : Justificatif de préinscription à une formation",
+        "",
+        "Cadre réservé à l’organisme de formation",
+        "Je soussigné(e), Monsieur Clément VAILLANT",
+        "Responsable de l'organisme de formation : INTEGRALE SECURITE FORMATIONS",
+        "Numéro d'enregistrement DIRECCTE : 93830600283",
+        "Autorisé à exercer par le CNAPS sous le numéro : FOR-083-2027-02-08-20220755135",
+        "Contact : 04 22 47 07 68 – integralesecuriteformations@gmail.com",
+        f"Certifie que Monsieur / Madame : {stagiaire['nom']} {stagiaire['prenom']}",
+        "est préinscrit(e) à la formation qualifiante ci-dessous :",
+        f"Libellé exact de la formation : {formation['label']}",
+        f"Numéro d'enregistrement RNCP : {formation['rncp']}",
+        f"Nature de la formation : {formation['nature']}",
+        f"Dates de la formation : {stagiaire['session']} qui se déroulera à Puget sur Argens (83480).",
+        "Lieu(x) de réalisation de la formation : Intégrale Sécurité Formations - 54 chemin du Carreou - 83480 PUGET SUR ARGENS",
+        "",
+        "Monsieur Clément VAILLANT",
+        "Directeur Général – Intégrale Sécurité Formations",
+    ]
+
+    image = Image.new("RGB", (1240, 1754), "white")
+    draw = ImageDraw.Draw(image)
     try:
-        if ext == '.pdf':
-            return os.path.basename(filepath)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+        title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+    except Exception:
+        font = ImageFont.load_default()
+        title_font = font
 
-        if os.path.exists(pdf_path):
-            try:
-                os.remove(pdf_path)
-            except Exception:
-                pass
+    y = 60
+    for i, line in enumerate(lines):
+        current_font = title_font if i == 0 else font
+        wrapped = []
+        words = line.split(" ")
+        part = ""
+        for word in words:
+            test = (part + " " + word).strip()
+            if draw.textlength(test, font=current_font) <= 1100:
+                part = test
+            else:
+                wrapped.append(part)
+                part = word
+        wrapped.append(part)
+        for segment in wrapped:
+            draw.text((70, y), segment, fill="black", font=current_font)
+            y += 40 if i == 0 else 34
+        if line == "":
+            y += 10
 
-        if ext in ['.jpg', '.jpeg', '.png', '.heic', '.webp', '.tif', '.tiff']:
-            if ext == '.heic' and not HEIC_OK:
-                return None
-            image = Image.open(filepath)
-            if getattr(image, "is_animated", False):
-                image.seek(0)
-            rgb_im = image.convert('RGB')
-            rgb_im.save(pdf_path)
-            return os.path.basename(pdf_path)
+    signature_path = os.path.join("static", "signature_bloc.png")
+    if os.path.exists(signature_path):
+        signature = Image.open(signature_path).convert("RGB")
+        signature.thumbnail((320, 160))
+        image.paste(signature, (70, y + 10))
 
-        elif ext in ['.doc', '.docx', '.odt', '.txt', '.rtf']:
-            pypandoc.convert_file(filepath, 'pdf', outputfile=pdf_path)
-            return os.path.basename(pdf_path)
+    image.save(file_path, "PDF", resolution=100.0)
+    return file_path
 
-        return None
 
-    except Exception as e:
-        print(f"[ERROR] Conversion échouée : {e}")
-        return os.path.basename(filepath)
-
-# -----------------------
-# Gestion des emails (style harmonisé)
-# -----------------------
-
-def template_email(titre, color, contenu_html, bouton=None):
-    logo_url = "https://cnapsv5-1.onrender.com/static/logo_integrale_academy.png"
-    bouton_html = ""
-    if bouton:
-        bouton_html = f"""
-        <div style="text-align:center; margin:30px 0;">
-          <a href="{bouton['url']}"
-             style="display:inline-block; background:{bouton['couleur']}; color:white; padding:14px 22px; 
-                    text-decoration:none; font-size:16px; font-weight:bold; border-radius:6px;">
-            {bouton['texte']}
-          </a>
-        </div>
-        """
-    return f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color:#f5f5f5; padding:20px; color:#333;">
-        <div style="max-width:600px; margin:auto; background:white; padding:25px; border-radius:10px; border:1px solid #ddd;">
-          
-          <!-- Logo + Nom -->
-          <div style="text-align:center; margin-bottom:20px;">
-            <img src="{logo_url}" alt="Intégrale Academy" style="max-height:80px; width:auto; display:block; margin:auto;">
-            <div style="font-size:18px; font-weight:bold; margin-top:8px;">Intégrale Academy</div>
-          </div>
-
-          <!-- Titre -->
-          <h2 style="color:{color}; text-align:center; margin-top:0;">{titre}</h2>
-
-          <!-- Contenu -->
-          {contenu_html}
-
-          <!-- Bouton -->
-          {bouton_html}
-
-          <!-- Signature -->
-          <p style="margin-top:30px; text-align:center; font-size:14px; color:#555;">
-            Cordialement,<br>L’équipe <strong>Intégrale Academy</strong>
-          </p>
-        </div>
-      </body>
-    </html>
-    """
-
-def send_email(user_email, subject, contenu_txt, contenu_html):
+def send_email_with_attachment(user_email, subject, contenu_txt, contenu_html, attachment_path):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     smtp_user = os.environ.get("EMAIL_USER")
     smtp_password = os.environ.get("EMAIL_PASSWORD")
 
     if not smtp_user or not smtp_password:
-        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis dans Render")
+        print("⚠️ EMAIL_USER ou EMAIL_PASSWORD non définis")
         return False
 
     try:
@@ -147,317 +131,122 @@ def send_email(user_email, subject, contenu_txt, contenu_html):
         msg.set_content(contenu_txt)
         msg.add_alternative(contenu_html, subtype="html")
 
+        with open(attachment_path, "rb") as f:
+            msg.add_attachment(
+                f.read(),
+                maintype="application",
+                subtype="pdf",
+                filename=os.path.basename(attachment_path)
+            )
+
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
 
-        print(f"📧 Mail '{subject}' envoyé à {user_email}")
         return True
-
     except Exception as e:
-        print(f"⚠️ Erreur lors de l'envoi du mail ({subject}) à {user_email} : {e}")
+        print(f"⚠️ Erreur envoi mail : {e}")
         return False
 
-# --- Confirmation de dépôt ---
-def send_accuse_reception(user_email, user_name):
-    contenu_txt = f"Bonjour {user_name},\n\nVotre dossier a bien été transmis ✅"
-    contenu_html = template_email(
-        "✅ Confirmation de dépôt CNAPS",
-        "#27ae60",
-        f"""
-        <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>📩 Votre dossier CNAPS a bien été <span style="color:green; font-weight:bold;">transmis</span> ✅</p>
-        <p>Nous allons à présent procéder à une 🔍 vérification de vos documents et nous reviendrons vers vous dans les meilleurs délais.</p>
-        """
-    )
-    return send_email(user_email, "Confirmation de dépôt - Intégrale Academy", contenu_txt, contenu_html)
 
-# --- Documents non conformes ---
-def send_non_conforme_email(user_email, user_name, comment, dossier, data):
-    contenu_txt = f"Bonjour {user_name},\n\nVos documents ne sont pas conformes ❌\nCommentaire : {comment}"
-    contenu_html = template_email(
-        "❌ Documents CNAPS non conformes",
-        "#c0392b",
-        f"""
-        <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>❌ Après vérification par nos services, nous vous informons que les documents transmis 
-        <span style="color:red; font-weight:bold;">ne sont pas conformes</span>.</p>
-        
-        <div style="background:#fff3cd; padding:15px; border-radius:8px; border:1px solid #ffeeba; margin:20px 0;">
-          ⚠️ <strong>Détail des non conformités :</strong><br><br>
-          <em>{comment}</em>
-        </div>
+def get_mail_content(stagiaire, cnaps_link):
+    formation = FORMATIONS[stagiaire['formation']]['label']
+    subject = "Votre formation - Procédure demande d'autorisation CNAPS"
+    text = f"""Bonjour,\n\nVous souhaitez suivre une formation {formation}.\n\nVous pouvez déposer votre dossier CNAPS puis cliquer sur ce lien : {cnaps_link}\n\nLa Team Intégrale Academy"""
+    html = f"""
+    <html><body style=\"font-family:Arial,sans-serif;line-height:1.6;color:#222;\">
+    <p>Bonjour,</p>
+    <p>Vous souhaitez suivre une formation <b>{formation}</b>. Pour intégrer une formation aux métiers de la sécurité privée, vous devez obtenir une autorisation préalable d'entrée en formation délivrée par le CNAPS (Ministère de l'intérieur).</p>
+    <p>Pour obtenir cette autorisation, vous devez à présent créer votre espace particulier sur le site internet du CNAPS (Ministère de l'intérieur) en cliquant ici : <a href=\"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/creation-compte-pp\">https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/creation-compte-pp</a></p>
+    <p>Vous devrez joindre à votre demande :</p>
+    <p>➡️ Une copie lisible de votre pièce d’identité (carte d'identité recto verso ou passeport ou titre de séjour recto verso). Le permis de conduire n'est pas accepté.</p>
+    <p>➡️ Un justificatif de domicile de moins de 3 mois (pas de facture de téléphone). Acceptés : facture d’eau, d’électricité, de gaz, quittance de loyer.</p>
+    <p>➡️ Si vous êtes hébergé(e) :<br>- Pièce d’identité de l’hébergeant<br>- Attestation d’hébergement - Modèle officiel à télécharger ici : <a href=\"https://www.service-public.fr/simulateur/calcul/AttestationHebergement\">https://www.service-public.fr/simulateur/calcul/AttestationHebergement</a></p>
+    <p>➡️ Le justificatif de pré-inscription en centre de formation que vous trouverez en pièce jointe.</p>
+    <p>➡️ Si vous êtes étranger, vous devrez également fournir :<br>- Casier judiciaire de votre pays de naissance de moins de 3 mois traduit en français<br>- Diplôme français supérieur au brevet ou test TCF de moins de 2 ans</p>
+    <p>Attention, tout document manquant ou incomplet entraînera un retard de traitement de la part des services du CNAPS.</p>
+    <p><b>Important :</b> Pour un meilleur suivi de votre dossier, nous vous remercions de bien vouloir cliquer sur le bouton ci-dessous dès que votre dossier CNAPS aura été déposé :</p>
+    <p style=\"margin:24px 0;\"><a href=\"{cnaps_link}\" style=\"background:#198754;color:#fff;text-decoration:none;padding:12px 18px;border-radius:6px;font-weight:bold;\">J'ai déposé mon dossier auprès du CNAPS</a></p>
+    <p>Nous restons à votre disposition au 04 22 47 07 68 pour tous renseignements complémentaires,</p>
+    <p>La Team Intégrale Academy</p>
+    </body></html>
+    """
+    return subject, text, html
 
-        <p>Nous vous remercions de bien vouloir fournir des documents conformes à la réglementation en vigueur.</p>
-        """,
-        bouton={
-            "url": url_for('index', _external=True),
-            "texte": "🔄 Déposer une nouvelle demande",
-            "couleur": "#27ae60"
-        }
-    )
-    dossier["dernier_mail_non_conforme"] = contenu_html
-    save_data(data)
-    send_email(user_email, "Documents non conformes - Intégrale Academy", contenu_txt, contenu_html)
-
-# --- Documents conformes ---
-def send_conforme_email(user_email, user_name, dossier, data):
-    contenu_txt = f"Bonjour {user_name},\n\nVos documents sont conformes ✅"
-    contenu_html = template_email(
-        "✅ Documents CNAPS conformes",
-        "#27ae60",
-        f"""
-        <p>Bonjour <strong>{user_name}</strong>,</p>
-        <p>✅ Après vérification par nos services, nous vous informons que les documents transmis sont 
-        <span style="color:green; font-weight:bold;">conformes</span>.</p>
-        <p>📤 Nous avons transmis la demande d'autorisation auprès du CNAPS – Ministère de l'intérieur.</p>
-        <p>👮 Les services de l’État vont procéder à une enquête administrative (vérification des antécédents judiciaires).</p>
-        <p>📮 Après enquête, vous recevrez votre autorisation par courrier postal à votre domicile.</p>
-        """
-    )
-    dossier["dernier_mail_conforme"] = contenu_html
-    save_data(data)
-    send_email(user_email, "Documents conformes - Intégrale Academy", contenu_txt, contenu_html)
-
-# -----------------------
-# Routes Flask
-# -----------------------
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/submit', methods=['POST'])
 def submit():
-    nom = clean_filename(request.form['nom'])
-    prenom = clean_filename(request.form['prenom'])
-    email = request.form['email']
+    nom = clean_value(request.form.get('nom'))
+    prenom = clean_value(request.form.get('prenom'))
+    email = clean_value(request.form.get('email'))
+    telephone = clean_value(request.form.get('telephone'))
+    formation = clean_value(request.form.get('formation'))
+    session = clean_value(request.form.get('session'))
 
-    fichiers = []
-    id_files = request.files.getlist('id_files')
-    domicile_files = request.files.getlist('domicile_file')
-    identite_hebergeant_files = request.files.getlist('identite_hebergeant')
-    attestation_hebergement_files = request.files.getlist('attestation_hebergement')
-    non_francais_casier_files = request.files.getlist('non_francais_casier')
-    non_francais_diplome_files = request.files.getlist('non_francais_diplome')
-
-    def save_files(files, prefix, nom, prenom):
-        paths = []
-        for i, file in enumerate(files):
-            if file and file.filename:
-                base_filename = f"{nom}_{prenom}_{prefix}_{i}"
-                orig_ext = os.path.splitext(file.filename)[1].lower()
-                temp_path = os.path.join(UPLOAD_FOLDER, f"{base_filename}{orig_ext}")
-                try:
-                    file.save(temp_path)
-                    converted = convert_to_pdf(temp_path, base_filename)
-                    if converted:
-                        final_path = os.path.join(UPLOAD_FOLDER, converted)
-                        if os.path.abspath(final_path) != os.path.abspath(temp_path):
-                            try:
-                                os.remove(temp_path)
-                            except Exception:
-                                pass
-                        paths.append(converted)
-                    else:
-                        paths.append(os.path.basename(temp_path))
-                except Exception as e:
-                    print(f"[ERROR] Sauvegarde échouée : {e}")
-        return paths
-
-    fichiers += save_files(id_files, "id", nom, prenom)
-    fichiers += save_files(domicile_files, "domicile", nom, prenom)
-    fichiers += save_files(identite_hebergeant_files, "id_hebergeant", nom, prenom)
-    fichiers += save_files(attestation_hebergement_files, "attestation", nom, prenom)
-    fichiers += save_files(non_francais_casier_files, "casier_non_francais", nom, prenom)
-    fichiers += save_files(non_francais_diplome_files, "diplome_non_francais", nom, prenom)
+    if formation not in FORMATIONS:
+        flash("Formation invalide.")
+        return redirect(url_for('index'))
 
     data = load_data()
     dossier = {
         "nom": nom,
         "prenom": prenom,
         "email": email,
-        "fichiers": fichiers,
-        "commentaire": "",
-        "statut": "",
-        "mail_non_conforme_date": "",
-        "mail_conforme_date": "",
-        "dernier_mail_non_conforme": "",
-        "dernier_mail_conforme": ""
+        "telephone": telephone,
+        "formation": formation,
+        "session": session,
+        "date_preinscription": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "cnaps_depose": False,
+        "cnaps_depose_date": "",
     }
+
     data.append(dossier)
     save_data(data)
+    index_dossier = len(data) - 1
 
-    send_accuse_reception(email, f"{prenom} {nom}")
+    justificatif_path = generate_justificatif_pdf(dossier)
+    cnaps_link = url_for('cnaps_submitted', index=index_dossier, _external=True)
+    subject, txt, html = get_mail_content(dossier, cnaps_link)
+    send_email_with_attachment(email, subject, txt, html, justificatif_path)
+
     return redirect(url_for('confirmation'))
+
+
+@app.route('/cnaps_submitted/<int:index>')
+def cnaps_submitted(index):
+    data = load_data()
+    if 0 <= index < len(data):
+        data[index]['cnaps_depose'] = True
+        data[index]['cnaps_depose_date'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+        save_data(data)
+    return render_template('cnaps_submitted.html')
+
 
 @app.route('/confirmation')
 def confirmation():
     return render_template('confirmation.html')
 
+
 @app.route('/admin')
 def admin():
     data = load_data()
-    for dossier in data:
-        fichiers_existants = []
-        for fichier in dossier.get("fichiers", []):
-            if os.path.exists(os.path.join(UPLOAD_FOLDER, fichier)):
-                fichiers_existants.append(fichier)
-        dossier["fichiers"] = fichiers_existants
+    return render_template('admin.html', data=data, dossier_count=len(data))
 
-    file_count = len(os.listdir(UPLOAD_FOLDER))
-    dossier_count = len(data)
-
-    return render_template('admin.html', data=data, file_count=file_count, dossier_count=dossier_count)
-
-@app.route('/save_comment', methods=['POST'])
-def save_comment():
-    index = int(request.form['index'])
-    comment = request.form['commentaire']
-    data = load_data()
-    if 0 <= index < len(data):
-        data[index]["commentaire"] = comment
-        save_data(data)
-    return redirect(url_for('admin'))
-
-@app.route('/set_status', methods=['POST'])
-def set_status():
-    index = int(request.form['index'])
-    status = request.form['status']
-    data = load_data()
-    if 0 <= index < len(data):
-        data[index]["statut"] = status
-
-        if status == "non conforme":
-            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
-            commentaire = data[index].get("commentaire", "Aucun commentaire")
-            send_non_conforme_email(data[index]["email"], nom_prenom, commentaire, data[index], data)
-            data[index]["mail_non_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        elif status == "conforme":
-            nom_prenom = f"{data[index]['prenom']} {data[index]['nom']}"
-            send_conforme_email(data[index]["email"], nom_prenom, data[index], data)
-            data[index]["mail_conforme_date"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-        save_data(data)
-    return redirect(url_for('admin'))
-
-@app.route('/mail_preview/<int:index>/<status>')
-def mail_preview(index, status):
-    data = load_data()
-    if 0 <= index < len(data):
-        if status == "conforme":
-            return data[index].get("dernier_mail_conforme", "Pas de mail conforme enregistré")
-        elif status == "non_conforme":
-            return data[index].get("dernier_mail_non_conforme", "Pas de mail non conforme enregistré")
-    return "Mail introuvable"
-
-@app.route('/delete', methods=['POST'])
-def delete():
-    index = int(request.form['index'])
-    data = load_data()
-    if 0 <= index < len(data):
-        dossier = data[index]
-        for fichier in dossier["fichiers"]:
-            try:
-                os.remove(os.path.join(UPLOAD_FOLDER, fichier))
-            except Exception:
-                pass
-        prefix = f"{dossier['nom']}_{dossier['prenom']}_"
-        for f in os.listdir(UPLOAD_FOLDER):
-            if f.startswith(prefix):
-                try:
-                    os.remove(os.path.join(UPLOAD_FOLDER, f))
-                except Exception:
-                    pass
-        data.pop(index)
-        save_data(data)
-    return redirect(url_for('admin'))
-
-@app.route('/download', methods=['POST'])
-def download():
-    index = int(request.form['index'])
-    data = load_data()
-    dossier = data[index]
-    zip_path = os.path.join(UPLOAD_FOLDER, f"{dossier['nom']}_{dossier['prenom']}.zip")
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        for fichier in dossier["fichiers"]:
-            file_path = os.path.join(UPLOAD_FOLDER, fichier)
-            if os.path.exists(file_path):
-                zipf.write(file_path, fichier)
-    return send_file(zip_path, as_attachment=True)
-
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    path = os.path.join(UPLOAD_FOLDER, filename)
-    if not os.path.exists(path):
-        return "Fichier introuvable", 404
-    return send_file(path)
 
 @app.route('/reset', methods=['POST'])
 def reset():
-    save_data([])  # vider data.json
+    save_data([])
     for f in os.listdir(UPLOAD_FOLDER):
         try:
-            os.remove(os.path.join(UPLOAD_FOLDER, f))
+            if f.lower().endswith('.pdf'):
+                os.remove(os.path.join(UPLOAD_FOLDER, f))
         except Exception:
             pass
-    flash("✅ Base et fichiers vidés avec succès.")
+    flash("✅ Base et justificatifs PDF vidés avec succès.")
     return redirect(url_for('admin'))
-
-
-# ✅ Nouvelle route pour vérifier automatiquement les dépôts CNAPS
-@app.route("/check_cnaps")
-def check_cnaps():
-    """Vérifie automatiquement le nombre de demandes CNAPS non traitées"""
-    try:
-        CNAPS_URL = "https://cnapsv5-1.onrender.com/data.json"
-        r = requests.get(CNAPS_URL, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            # Si c’est une liste (comme chez toi)
-            if isinstance(data, list):
-                non_traitees = [d for d in data if not d.get("statut")]
-                return {"count": len(non_traitees)}
-            # Si c’est un dict (autre format)
-            elif isinstance(data, dict):
-                demandes = data.get("demandes", [])
-                non_traitees = [d for d in demandes if not d.get("statut")]
-                return {"count": len(non_traitees)}
-    except Exception as e:
-        print("⚠️ Erreur récupération CNAPS:", e)
-
-    return {"count": -1}
-
-
-# -----------------------
-# ✅ Nouvelle route publique pour exposer data.json + compter les demandes
-# -----------------------
-@app.route("/data.json")
-def data_json():
-    """Renvoie le nombre total de dossiers CNAPS déposés (peu importe le statut)"""
-    try:
-        if not os.path.exists(DATA_FILE):
-            result = {"count": 0, "demandes": []}
-        else:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            # Compatibilité : liste ou dictionnaire
-            demandes = data if isinstance(data, list) else data.get("demandes", [])
-            result = {
-                "count": len(demandes),
-                "demandes": demandes
-            }
-
-        headers = {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-        }
-        return json.dumps(result, ensure_ascii=False), 200, headers
-
-    except Exception as e:
-        print("Erreur lecture data.json:", e)
-        return json.dumps({"count": -1, "error": str(e)}), 500, {
-            "Access-Control-Allow-Origin": "*"
-        }
