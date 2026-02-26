@@ -39,9 +39,11 @@
         <th>Formation</th>
         <th>Session</th>
         <th>Téléphone</th>
-        <th>Email</th>
+        <th>Adresse email</th>
         <th>Date préinscription</th>
         <th>Dossier CNAPS déposé</th>
+        <th>Email</th>
+        <th>SMS</th>
       </tr>
     </thead>
     <tbody>
@@ -59,6 +61,20 @@
             <span class="ok">✅ Oui ({{ row.cnaps_depose_date }})</span>
           {% else %}
             <span class="ko">❌ Non</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if row.email_sent %}
+            <span class="ok">✅ Envoyé</span>
+          {% else %}
+            <span class="ko">❌ {{ row.email_error or 'Non envoyé' }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if row.sms_sent %}
+            <span class="ok">✅ Envoyé</span>
+          {% else %}
+            <span class="ko">❌ {{ row.sms_error or 'Non envoyé' }}</span>
           {% endif %}
         </td>
       </tr>
