@@ -8,10 +8,28 @@ from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-UPLOAD_FOLDER = '/mnt/data/uploads'
-DATA_FILE = '/mnt/data/data.json'
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def get_storage_paths():
+    preferred_root = '/mnt/data'
+    fallback_root = os.path.join(app.root_path, 'data')
+
+    for root in (preferred_root, fallback_root):
+        upload_folder = os.path.join(root, 'uploads')
+        data_file = os.path.join(root, 'data.json')
+        try:
+            os.makedirs(upload_folder, exist_ok=True)
+            if not os.path.exists(data_file):
+                with open(data_file, 'w', encoding='utf-8') as f:
+                    json.dump([], f)
+            return upload_folder, data_file
+        except OSError:
+            continue
+
+    raise RuntimeError("Aucun dossier de stockage accessible n'a pu être initialisé.")
+
+
+UPLOAD_FOLDER, DATA_FILE = get_storage_paths()
 
 FORMATIONS = {
     "APS": {
