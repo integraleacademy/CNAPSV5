@@ -233,7 +233,7 @@ def get_mail_content(stagiaire, cnaps_link):
 
 @app.route('/')
 def index():
-    return redirect(PUBLIC_FORM_URL)
+    return render_template('index.html', public_form_url=PUBLIC_FORM_URL)
 
 
 @app.route('/submit', methods=['POST'])
